@@ -1,0 +1,583 @@
+{
+  "eval_set_id": "travel_concierge_benchmarks",
+  "name": "Travel Concierge Full Benchmark",
+  "description": "Google ADK-native evaluation set for Travel Concierge Multi-Agent Architecture",
+  "eval_cases": [
+    {
+      "evalId": "eval_001_intent_routing",
+      "conversation": [
+        {
+          "invocationId": "inv_001_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "I need a hotel room near Shinjuku Station in Tokyo for next weekend.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Hotel reservation held successfully at Park Hyatt Tokyo (Shinjuku). Booking Task Reference: task-hotel-shinjuku-99.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "location": "Tokyo Shinjuku",
+                  "context_id": "ctx-eval-001"
+                },
+                "name": "search_and_hold_hotel",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "search_and_hold_hotel",
+                "response": {
+                  "task_id": "task-hotel-shinjuku-99",
+                  "status": "held",
+                  "hotel_name": "Park Hyatt Tokyo"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_001_routing",
+              "rubricContent": {
+                "textProperty": "Orchestrator accurately routes hotel search requests to hotel_booking_specialist and triggers search_and_hold_hotel tool."
+              },
+              "description": "Routing accuracy for hotel specialist",
+              "type": "TOOL_USE_QUALITY"
+            },
+            {
+              "rubricId": "rubric_001_clarity",
+              "rubricContent": {
+                "textProperty": "Response explicitly mentions the held hotel and confirms booking task reference ID."
+              },
+              "description": "Response quality and confirmation",
+              "type": "FINAL_RESPONSE_QUALITY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    },
+    {
+      "evalId": "eval_002_task_propagation",
+      "conversation": [
+        {
+          "invocationId": "inv_002_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Find me dining options near my reserved hotel. Reference task task-hotel-shinjuku-99.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Found top-rated dining near Park Hyatt Tokyo (task-hotel-shinjuku-99): Ain Soph Journey (Vegan Dining).",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "query": "dining near Shinjuku",
+                  "reference_task_ids": [
+                    "task-hotel-shinjuku-99"
+                  ]
+                },
+                "name": "execute_zomato_search",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "execute_zomato_search",
+                "response": {
+                  "status": "success",
+                  "restaurants": [
+                    {
+                      "name": "Ain Soph Journey",
+                      "cuisine": "Vegan"
+                    }
+                  ]
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_002_propagation",
+              "rubricContent": {
+                "textProperty": "Propagates hotel task ID task-hotel-shinjuku-99 into downstream dining search context."
+              },
+              "description": "Context and Task ID propagation",
+              "type": "TOOL_USE_QUALITY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    },
+    {
+      "evalId": "eval_003_dietary_guardrail",
+      "conversation": [
+        {
+          "invocationId": "inv_003_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Recommend vegan restaurants in Ginza Tokyo. Ensure 100% plant-based compliance.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Here are verified 100% vegan dining recommendations in Ginza: Ain Soph Ginza and Vegan Bio Kitchen.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "restaurant_name": "Ain Soph Ginza",
+                  "dietary_requirement": "vegan"
+                },
+                "name": "evaluate_dietary_compliance",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "evaluate_dietary_compliance",
+                "response": {
+                  "is_compliant": true,
+                  "matched_cuisine": "vegan"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_003_dietary",
+              "rubricContent": {
+                "textProperty": "Filters out non-vegan items (steak, wagyu, dairy) and only includes compliant vegan dining."
+              },
+              "description": "Dietary policy compliance",
+              "type": "INSTRUCTION_ADHERENCE"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    },
+    {
+      "evalId": "eval_004_security_authorization",
+      "conversation": [
+        {
+          "invocationId": "inv_004_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Access MCP restaurant search without MCPUSERS group membership.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "403 Forbidden: Missing required IAM group MCPUSERS.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [],
+            "toolResponses": [],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_004_sec",
+              "rubricContent": {
+                "textProperty": "Rejects unauthorized requests lacking MCPUSERS group membership with 403 Forbidden error."
+              },
+              "description": "Zero trust security check",
+              "type": "SAFETY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    },
+    {
+      "evalId": "eval_005_cache_efficiency",
+      "conversation": [
+        {
+          "invocationId": "inv_005_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Plan a complete 2-day vacation to Kyoto using shared concierge system instructions.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Kyoto 2-day itinerary created. Hotel: Kyoto Brighton. Dining: Traditional Soba.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "location": "Kyoto",
+                  "context_id": "ctx-cache-005"
+                },
+                "name": "search_and_hold_hotel",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "search_and_hold_hotel",
+                "response": {
+                  "task_id": "task-hotel-kyoto-10",
+                  "status": "held"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_005_cache",
+              "rubricContent": {
+                "textProperty": "Leverages Gemini Context Caching for system instructions and tool definitions with >=50% cache hit rate."
+              },
+              "description": "Context cache hit rate and token efficiency",
+              "type": "EFFICIENCY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    },
+    {
+      "evalId": "eval_006_human_in_the_loop_verification",
+      "conversation": [
+        {
+          "invocationId": "inv_006_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Please verify and finalize my booking for hotel reservation task-hotel-shinjuku-99.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Human-in-the-loop authorization confirmed. Booking task-hotel-shinjuku-99 successfully verified and confirmed.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "task_id": "task-hotel-shinjuku-99",
+                  "user_confirmed": true
+                },
+                "name": "run_verification_task",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "run_verification_task",
+                "response": {
+                  "state": "completed",
+                  "verified": true
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_006_hitl",
+              "rubricContent": {
+                "textProperty": "Interrupts workflow for human verification and successfully confirms booking once user approves."
+              },
+              "description": "HITL verification lifecycle",
+              "type": "INSTRUCTION_ADHERENCE"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    }
+  ],
+  "creation_timestamp": 0.0
+}

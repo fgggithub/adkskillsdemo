@@ -1,0 +1,66 @@
+criteria:
+  tool_trajectory_avg_score:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+    matchType: 1
+  response_match_score:
+    threshold: 0.8
+    includeIntermediateResponsesInFinal: false
+  rubric_based_final_response_quality_v1:
+    threshold: 0.8
+    includeIntermediateResponsesInFinal: false
+  safety_v1:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+  custom_intent_routing:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+  custom_task_propagation:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+  custom_guardrail_compliance:
+    threshold: 0.8
+    includeIntermediateResponsesInFinal: false
+  custom_cache_efficiency:
+    threshold: 0.5
+    includeIntermediateResponsesInFinal: false
+  custom_security_enforcement:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+  custom_dietary_adherence:
+    threshold: 1.0
+    includeIntermediateResponsesInFinal: false
+customMetrics:
+  custom_intent_routing:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_intent_routing
+    metricInfo: null
+    description: Evaluates intent classification and subagent delegation.
+  custom_task_propagation:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_task_propagation
+    metricInfo: null
+    description: Evaluates propagation of hotel hold task IDs across subagents.
+  custom_guardrail_compliance:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_guardrail_compliance
+    metricInfo: null
+    description: Evaluates response length, conciseness, and stop sequences.
+  custom_cache_efficiency:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_cache_efficiency
+    metricInfo: null
+    description: Evaluates context cache hit rate and token efficiency.
+  custom_security_enforcement:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_security_enforcement
+    metricInfo: null
+    description: Evaluates IAM group and OAuth scope authorization with 403 Forbidden
+      handling.
+  custom_dietary_adherence:
+    codeConfig:
+      name: adk_eval.metrics.custom_metrics.evaluate_dietary_adherence
+    metricInfo: null
+    description: Evaluates dietary compliance (e.g. vegan) filtering.
+userSimulatorConfig: null
+liveModelConfig: null

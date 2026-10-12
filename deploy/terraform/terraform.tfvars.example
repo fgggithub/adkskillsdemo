@@ -1,0 +1,8 @@
+project_id         = "your-gcp-project-id"
+region             = "us-central1"
+environment        = "prod"
+service_name       = "travel-concierge-orchestrator"
+min_instance_count = 0
+max_instance_count = 10
+cpu_limit          = "2"
+memory_limit       = "2Gi"

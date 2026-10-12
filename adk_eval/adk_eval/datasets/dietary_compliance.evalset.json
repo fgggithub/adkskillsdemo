@@ -1,0 +1,105 @@
+{
+  "eval_set_id": "dietary_benchmark",
+  "name": "Dietary Compliance Benchmark",
+  "description": "Dietary advisor skill and meal compliance evaluation",
+  "eval_cases": [
+    {
+      "evalId": "eval_003_dietary_guardrail",
+      "conversation": [
+        {
+          "invocationId": "inv_003_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Recommend vegan restaurants in Ginza Tokyo. Ensure 100% plant-based compliance.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Here are verified 100% vegan dining recommendations in Ginza: Ain Soph Ginza and Vegan Bio Kitchen.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "restaurant_name": "Ain Soph Ginza",
+                  "dietary_requirement": "vegan"
+                },
+                "name": "evaluate_dietary_compliance",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "evaluate_dietary_compliance",
+                "response": {
+                  "is_compliant": true,
+                  "matched_cuisine": "vegan"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_003_dietary",
+              "rubricContent": {
+                "textProperty": "Filters out non-vegan items (steak, wagyu, dairy) and only includes compliant vegan dining."
+              },
+              "description": "Dietary policy compliance",
+              "type": "INSTRUCTION_ADHERENCE"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    }
+  ],
+  "creation_timestamp": 0.0
+}

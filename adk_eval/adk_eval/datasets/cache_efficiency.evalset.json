@@ -1,0 +1,105 @@
+{
+  "eval_set_id": "cache_benchmark",
+  "name": "Cache Efficiency Benchmark",
+  "description": "Context cache hit rate and token pricing evaluation",
+  "eval_cases": [
+    {
+      "evalId": "eval_005_cache_efficiency",
+      "conversation": [
+        {
+          "invocationId": "inv_005_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Plan a complete 2-day vacation to Kyoto using shared concierge system instructions.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Kyoto 2-day itinerary created. Hotel: Kyoto Brighton. Dining: Traditional Soba.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "location": "Kyoto",
+                  "context_id": "ctx-cache-005"
+                },
+                "name": "search_and_hold_hotel",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "search_and_hold_hotel",
+                "response": {
+                  "task_id": "task-hotel-kyoto-10",
+                  "status": "held"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_005_cache",
+              "rubricContent": {
+                "textProperty": "Leverages Gemini Context Caching for system instructions and tool definitions with >=50% cache hit rate."
+              },
+              "description": "Context cache hit rate and token efficiency",
+              "type": "EFFICIENCY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    }
+  ],
+  "creation_timestamp": 0.0
+}

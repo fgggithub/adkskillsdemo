@@ -1,0 +1,114 @@
+{
+  "eval_set_id": "routing_benchmark",
+  "name": "Routing Benchmark",
+  "description": "Intent routing and subagent delegation evaluation",
+  "eval_cases": [
+    {
+      "evalId": "eval_001_intent_routing",
+      "conversation": [
+        {
+          "invocationId": "inv_001_1",
+          "userContent": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "I need a hotel room near Shinjuku Station in Tokyo for next weekend.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "user"
+          },
+          "finalResponse": {
+            "parts": [
+              {
+                "mediaResolution": null,
+                "codeExecutionResult": null,
+                "executableCode": null,
+                "fileData": null,
+                "functionCall": null,
+                "functionResponse": null,
+                "inlineData": null,
+                "text": "Hotel reservation held successfully at Park Hyatt Tokyo (Shinjuku). Booking Task Reference: task-hotel-shinjuku-99.",
+                "thought": null,
+                "thoughtSignature": null,
+                "videoMetadata": null,
+                "toolCall": null,
+                "toolResponse": null,
+                "partMetadata": null,
+                "audioTranscription": null
+              }
+            ],
+            "role": "model"
+          },
+          "intermediateData": {
+            "toolUses": [
+              {
+                "id": null,
+                "args": {
+                  "location": "Tokyo Shinjuku",
+                  "context_id": "ctx-eval-001"
+                },
+                "name": "search_and_hold_hotel",
+                "partialArgs": null,
+                "willContinue": null
+              }
+            ],
+            "toolResponses": [
+              {
+                "willContinue": null,
+                "scheduling": null,
+                "parts": null,
+                "id": null,
+                "name": "search_and_hold_hotel",
+                "response": {
+                  "task_id": "task-hotel-shinjuku-99",
+                  "status": "held",
+                  "hotel_name": "Park Hyatt Tokyo"
+                }
+              }
+            ],
+            "intermediateResponses": []
+          },
+          "creationTimestamp": 0.0,
+          "rubrics": [
+            {
+              "rubricId": "rubric_001_routing",
+              "rubricContent": {
+                "textProperty": "Orchestrator accurately routes hotel search requests to hotel_booking_specialist and triggers search_and_hold_hotel tool."
+              },
+              "description": "Routing accuracy for hotel specialist",
+              "type": "TOOL_USE_QUALITY"
+            },
+            {
+              "rubricId": "rubric_001_clarity",
+              "rubricContent": {
+                "textProperty": "Response explicitly mentions the held hotel and confirms booking task reference ID."
+              },
+              "description": "Response quality and confirmation",
+              "type": "FINAL_RESPONSE_QUALITY"
+            }
+          ],
+          "appDetails": null
+        }
+      ],
+      "conversationScenario": null,
+      "sessionInput": null,
+      "creationTimestamp": 0.0,
+      "rubrics": null,
+      "finalSessionState": {}
+    }
+  ],
+  "creation_timestamp": 0.0
+}
