@@ -55,7 +55,9 @@ class Settings:
     """Global application settings."""
     project_id: str = os.getenv("GOOGLE_CLOUD_PROJECT", "my-gcp-project")
     location: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-    model_name: str = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+    model_name: str = os.getenv("MODEL_NAME", "gemini-3.5-flash")
+    base_model_name: str = os.getenv("BASE_MODEL_NAME", "gemini-3.5-flash")
+    escalated_model_name: str = os.getenv("ESCALATED_MODEL_NAME", "gemini-3.5")
     environment: str = os.getenv("ENVIRONMENT", "development")
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
@@ -63,6 +65,18 @@ class Settings:
     circuit_breaker: CircuitBreakerConfig = field(default_factory=CircuitBreakerConfig)
     endpoints: ServiceEndpoints = field(default_factory=ServiceEndpoints)
     guardrails: GenerationGuardrailsConfig = field(default_factory=GenerationGuardrailsConfig)
+
+    @property
+    def PROJECT_ID(self) -> str:
+        return self.project_id
+
+    @property
+    def REGION(self) -> str:
+        return self.location
+
+    @property
+    def DEFAULT_MODEL(self) -> str:
+        return self.model_name
 
 
 # Global settings singleton

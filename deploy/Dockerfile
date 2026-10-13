@@ -27,6 +27,7 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 # Copy application source
 COPY travel_concierge /app/travel_concierge
+COPY skills /app/skills
 
 # Set environment variables
 ENV PATH=/home/appuser/.local/bin:$PATH \

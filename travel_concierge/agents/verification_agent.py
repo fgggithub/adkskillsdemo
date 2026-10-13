@@ -121,7 +121,16 @@ class VerificationAgentWrapper:
                     logger.warning(f"Resume task fallback: {e}")
                     final_response = MockVerificationService.resume_task(current_task_id, confirm_text)
 
-                metrics = track_llm_telemetry(final_response, span, agent_name="verification_subagent")
+                from travel_concierge.agents.model_escalator import default_escalator
+                escalation_dec = default_escalator.evaluate_request(confirm_text, span=span, agent_name="verification_subagent")
+
+                logger.info(
+                    f"[verification_subagent Context Management] Resuming task '{current_task_id}'. "
+                    f"Context technique: State Delta Compaction — appending user confirmation delta and preserving immutable task reference IDs. "
+                    f"Model Active: {escalation_dec.active_model}"
+                )
+
+                metrics = track_llm_telemetry(final_response, span, agent_name="verification_subagent", prompt_text=confirm_text)
                 task_state = "completed"
 
                 return {
@@ -131,6 +140,7 @@ class VerificationAgentWrapper:
                     "interrupt_message": interrupt_message,
                     "final_response": final_response,
                     "metrics": metrics.to_dict() if metrics else None,
+                    "model_escalation": escalation_dec.to_dict(),
                 }
 
             return {

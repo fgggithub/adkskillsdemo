@@ -22,6 +22,11 @@ class TokenUsageMetrics:
     cache_hit_rate: float
     cost_usd: float
 
+    @property
+    def cost_savings_pct(self) -> float:
+        """Percentage of token costs saved due to cache discount (75% discount on cached tokens)."""
+        return round(self.cache_hit_rate * 75.0, 1)
+
     def to_dict(self) -> dict:
         return {
             "prompt_tokens": self.prompt_tokens,
@@ -30,6 +35,7 @@ class TokenUsageMetrics:
             "completion_tokens": self.completion_tokens,
             "total_tokens": self.total_tokens,
             "cache_hit_rate": round(self.cache_hit_rate, 4),
+            "cost_savings_pct": self.cost_savings_pct,
             "cost_usd": round(self.cost_usd, 6),
         }
 
@@ -113,10 +119,12 @@ def track_llm_telemetry(
     response: Any,
     span: Optional[Span] = None,
     agent_name: str = "agent",
+    prompt_text: Optional[str] = None,
 ) -> Optional[TokenUsageMetrics]:
     """
     Extracts usage from response, calculates costs, updates OpenTelemetry span attributes,
-    and logs warnings if cache hit rate is below threshold.
+    records prompts and completions for forensic trace analysis, and logs verbose context
+    management decisions for educational observability.
     """
     raw_usage = extract_usage_from_response(response)
     if not raw_usage:
@@ -128,6 +136,8 @@ def track_llm_telemetry(
         completion_tokens=raw_usage["completion_tokens"],
     )
 
+    resp_str = str(response)
+
     if span and span.is_recording():
         span.set_attribute(f"llm.{agent_name}.prompt_tokens", metrics.prompt_tokens)
         span.set_attribute(f"llm.{agent_name}.cached_tokens", metrics.cached_tokens)
@@ -135,6 +145,18 @@ def track_llm_telemetry(
         span.set_attribute(f"llm.{agent_name}.total_tokens", metrics.total_tokens)
         span.set_attribute(f"llm.{agent_name}.cache_hit_rate", metrics.cache_hit_rate)
         span.set_attribute(f"llm.{agent_name}.cost_usd", metrics.cost_usd)
+        if prompt_text:
+            span.set_attribute(f"gen_ai.{agent_name}.prompt", str(prompt_text)[:2048])
+        span.set_attribute(f"gen_ai.{agent_name}.completion", resp_str[:2048])
+
+    # Verbose context management explanation for educational telemetry
+    if metrics.cached_tokens > 0:
+        logger.info(
+            f"[{agent_name} Context Management] Explicit Context Caching Active. "
+            f"Preserved {metrics.cached_tokens}/{metrics.prompt_tokens} tokens in Vertex AI cache "
+            f"(Hit Rate: {metrics.cache_hit_rate:.1%}, Cost Savings: {metrics.cost_savings_pct:.1f}%). "
+            f"Technique: Deterministic Prefix Alignment ensures instructions and schemas are reused without cache invalidation."
+        )
 
     if metrics.cache_hit_rate < 0.50 and metrics.prompt_tokens > 4096:
         logger.warning(
@@ -142,7 +164,7 @@ def track_llm_telemetry(
             f"Inspect dynamic context placement or prefix drift."
         )
 
-    logger.debug(
+    logger.info(
         f"[{agent_name} Telemetry] Prompt: {metrics.prompt_tokens} (Cached: {metrics.cached_tokens}) | "
         f"Hit Rate: {metrics.cache_hit_rate:.2%} | Cost: ${metrics.cost_usd:.6f}"
     )

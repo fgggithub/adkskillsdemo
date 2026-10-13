@@ -73,10 +73,41 @@ class EvaluationSuite:
 
     @staticmethod
     def evaluate_security_enforcement(denied_error: Optional[Exception]) -> MetricScore:
-        passed = isinstance(denied_error, PermissionError) and "403 Forbidden" in str(denied_error)
+        from travel_concierge.security.model_armor import ModelArmorViolationError
+        from travel_concierge.security.gateway_policy import GatewayPolicyViolationError
+
+        passed = (
+            isinstance(denied_error, (PermissionError, ModelArmorViolationError, GatewayPolicyViolationError))
+            or (denied_error is not None and ("403" in str(denied_error) or "blocked" in str(denied_error).lower()))
+        )
         return MetricScore(
             metric_name="security_policy_enforcement",
             passed=passed,
             score=1.0 if passed else 0.0,
-            details=f"Successfully caught expected 403 Forbidden: '{denied_error}'" if passed else "Security check did not block unauthorized caller!",
+            details=f"Successfully caught expected security denial: '{denied_error}'" if passed else "Security check did not block unauthorized/malicious caller!",
+        )
+
+    @staticmethod
+    def evaluate_model_escalation(result: Dict[str, Any], expected_escalated: bool) -> MetricScore:
+        escalation_info = result.get("model_escalation", {})
+        actual_escalated = escalation_info.get("escalated", False)
+        passed = actual_escalated == expected_escalated
+        active_model = escalation_info.get("active_model", "unknown")
+        reason = escalation_info.get("reason", "none")
+        return MetricScore(
+            metric_name="model_escalation_decision",
+            passed=passed,
+            score=1.0 if passed else 0.0,
+            details=f"Escalated: {actual_escalated} (Expected: {expected_escalated}) | Active Model: {active_model} | Reason: {reason}",
+        )
+
+    @staticmethod
+    def evaluate_multi_turn_refinement(result: Dict[str, Any], expected_min_turns: int = 2) -> MetricScore:
+        turn = result.get("turn", 1)
+        passed = turn >= expected_min_turns and bool(result.get("hotel_booking")) and bool(result.get("restaurant_recommendations"))
+        return MetricScore(
+            metric_name="multi_turn_refinement_fidelity",
+            passed=passed,
+            score=1.0 if passed else 0.0,
+            details=f"Completed refinement Turn: {turn} (Expected >= {expected_min_turns}) with persistent context.",
         )

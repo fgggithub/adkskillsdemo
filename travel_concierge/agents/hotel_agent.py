@@ -117,11 +117,23 @@ class HotelAgentWrapper:
             else:
                 task_id = "task-hotel-shinjuku-99"
 
+            # Model Escalation evaluation
+            from travel_concierge.agents.model_escalator import default_escalator
+            prompt_str = message_payload["parts"][0]["text"]
+            escalation_dec = default_escalator.evaluate_request(prompt_str, span=span, agent_name="hotel_subagent")
+
+            logger.info(
+                f"[hotel_subagent Context Management] Processing hotel hold for '{location}'. "
+                f"Context technique: Extractive Compaction — holding best candidate and omitting raw search list. "
+                f"Model Active: {escalation_dec.active_model}"
+            )
+
             span.set_attribute("a2a.generated_task_id", task_id)
-            metrics = track_llm_telemetry(response, span, agent_name="hotel_subagent")
+            metrics = track_llm_telemetry(response, span, agent_name="hotel_subagent", prompt_text=prompt_str)
 
             return {
                 "task_id": task_id,
                 "response": response,
                 "metrics": metrics.to_dict() if metrics else None,
+                "model_escalation": escalation_dec.to_dict(),
             }

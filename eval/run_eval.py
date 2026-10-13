@@ -90,6 +90,26 @@ def run_benchmark() -> Dict[str, Any]:
                 )
                 print(f"  LLM Judge Score: {judge_eval['overall_score']}/5.0 | {judge_eval['reasoning']}")
 
+                # Multi-turn Refinement & Escalation Evaluation
+                if tc.refinement_query:
+                    print(f"  [Executing Multi-turn Refinement]: {tc.refinement_query}")
+                    refined_result = root_agent.refine_itinerary(
+                        context_id=f"eval-{tc.id}",
+                        refinement_query=tc.refinement_query,
+                        token_claims=tc.token_claims,
+                        auto_confirm_booking=True,
+                    )
+                    mt_score = EvaluationSuite.evaluate_multi_turn_refinement(refined_result)
+                    scores.append(mt_score)
+                    if not mt_score.passed:
+                        case_passed = False
+
+                    if tc.expected_escalation is not None:
+                        esc_score = EvaluationSuite.evaluate_model_escalation(refined_result, tc.expected_escalation)
+                        scores.append(esc_score)
+                        if not esc_score.passed:
+                            case_passed = False
+
         for s in scores:
             status_symbol = "✓ PASS" if s.passed else "✗ FAIL"
             print(f"    - [{status_symbol}] {s.metric_name}: {s.details}")

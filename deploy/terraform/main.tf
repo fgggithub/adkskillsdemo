@@ -33,8 +33,14 @@ resource "google_artifact_registry_repository" "app_repo" {
   depends_on    = [google_project_service.enabled_apis]
   location      = var.region
   repository_id = "travel-concierge-repo"
-  description   = "Docker repository for Travel Concierge Multi-Agent Orchestrator"
+  description   = "Docker repository for Travel Concierge Multi-Agent Orchestrator (FDEDEMO)"
   format        = "DOCKER"
+
+  labels = {
+    tag         = "fdedemo"
+    project     = "fdedemo"
+    environment = "fdedemo"
+  }
 }
 
 # 3. Secret Manager Secret for Zomato / A2A Credentials
@@ -44,6 +50,12 @@ resource "google_secret_manager_secret" "api_credentials" {
 
   replication {
     auto {}
+  }
+
+  labels = {
+    tag         = "fdedemo"
+    project     = "fdedemo"
+    environment = "fdedemo"
   }
 }
 
@@ -59,7 +71,19 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
+  labels = {
+    tag         = "fdedemo"
+    project     = "fdedemo"
+    environment = "fdedemo"
+  }
+
   template {
+    labels = {
+      tag         = "fdedemo"
+      project     = "fdedemo"
+      environment = "fdedemo"
+    }
+
     service_account = google_service_account.concierge_sa.email
 
     scaling {
@@ -98,11 +122,26 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
       }
       env {
         name  = "MODEL_NAME"
-        value = "gemini-2.5-flash"
+        value = "gemini-3.5-flash"
       }
       env {
         name  = "ENABLE_CLOUD_TRACE"
         value = "true"
+      }
+      env {
+        name  = "RESOURCE_TAG"
+        value = "FDEDEMO"
+      }
+
+      startup_probe {
+        http_get {
+          path = "/healthz"
+          port = 8080
+        }
+        initial_delay_seconds = 10
+        period_seconds        = 5
+        failure_threshold     = 10
+        timeout_seconds       = 4
       }
 
       liveness_probe {
@@ -110,7 +149,7 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
           path = "/healthz"
           port = 8080
         }
-        initial_delay_seconds = 5
+        initial_delay_seconds = 15
         period_seconds        = 15
         timeout_seconds       = 3
       }

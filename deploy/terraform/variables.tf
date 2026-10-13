@@ -36,17 +36,17 @@ variable "min_instance_count" {
 variable "max_instance_count" {
   type        = number
   description = "Maximum number of Cloud Run instances"
-  default     = 10
+  default     = 4
 }
 
 variable "cpu_limit" {
   type        = string
   description = "CPU allocated per Cloud Run instance"
-  default     = "2"
+  default     = "1"
 }
 
 variable "memory_limit" {
   type        = string
   description = "Memory allocated per Cloud Run instance"
-  default     = "2Gi"
+  default     = "1Gi"
 }

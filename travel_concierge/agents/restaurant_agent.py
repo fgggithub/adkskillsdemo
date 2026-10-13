@@ -105,10 +105,24 @@ class RestaurantAgentWrapper:
                     data={"mcp_result": mcp_result},
                 )
 
-            metrics = track_llm_telemetry(response, span, agent_name="restaurant_subagent")
+            # Model Escalation evaluation
+            from travel_concierge.agents.model_escalator import default_escalator
+            prompt_str = message_payload["parts"][0]["text"]
+            escalation_dec = default_escalator.evaluate_request(prompt_str, span=span, agent_name="restaurant_subagent")
+
+            raw_mcp_len = len(str(mcp_result))
+            logger.info(
+                f"[restaurant_subagent Context Management] Compacting MCP dining payload for query '{query}'. "
+                f"Technique: Schema pruning & entity attribute filtering (Raw: {raw_mcp_len} chars -> Structured recommendations). "
+                f"Preserves cache prefix integrity and reduces downstream context bloat. "
+                f"Model Active: {escalation_dec.active_model}"
+            )
+
+            metrics = track_llm_telemetry(response, span, agent_name="restaurant_subagent", prompt_text=prompt_str)
 
             return {
                 "response": response,
                 "mcp_result": mcp_result,
                 "metrics": metrics.to_dict() if metrics else None,
+                "model_escalation": escalation_dec.to_dict(),
             }

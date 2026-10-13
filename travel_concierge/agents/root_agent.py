@@ -1,6 +1,8 @@
 """
 Root Orchestrator Agent: Travel Concierge.
-Coordinates subagents (hotel, restaurant, verification), context caching, and OpenTelemetry tracing.
+Coordinates subagents (hotel, restaurant, verification), context caching,
+dynamic model escalation, Model Armor guardrails, and OpenTelemetry tracing.
+Supports multi-turn conversational itinerary refinement.
 """
 import logging
 import uuid
@@ -11,6 +13,9 @@ from google.adk.agents import Agent
 from travel_concierge.config import settings
 from travel_concierge.telemetry.tracer import get_tracer, inject_trace_context
 from travel_concierge.telemetry.cost_tracker import calculate_token_cost, TokenUsageMetrics
+from travel_concierge.telemetry.budget_tracker import project_budget
+from travel_concierge.security.model_armor import guard_prompt, ModelArmorViolationError
+from travel_concierge.agents.model_escalator import default_escalator, EscalationDecision
 from travel_concierge.agents.base import SHARED_SYSTEM_INSTRUCTION, get_generation_config, get_cached_content
 from travel_concierge.agents.restaurant_agent import create_restaurant_subagent, RestaurantAgentWrapper
 from travel_concierge.agents.hotel_agent import create_hotel_subagent, HotelAgentWrapper
@@ -49,6 +54,7 @@ class TravelConciergeRootAgent:
     Production Root Travel Concierge Orchestrator.
     Manages end-to-end trip planning workflows across hotel accommodations,
     restaurant dining, and human-in-the-loop task verification.
+    Provides session persistence for multi-turn itinerary refinements.
     """
 
     def __init__(
@@ -71,6 +77,9 @@ class TravelConciergeRootAgent:
         self.verification_agent = verification_wrapper or VerificationAgentWrapper()
         self.adk_agent = create_travel_concierge_root_agent(cached_content_name=self.cached_content_name)
 
+        # In-memory session store for multi-turn state persistence
+        self.sessions: Dict[str, Dict[str, Any]] = {}
+
     def plan_trip(
         self,
         destination: str,
@@ -81,18 +90,39 @@ class TravelConciergeRootAgent:
     ) -> Dict[str, Any]:
         """
         Orchestrates full travel itinerary planning:
-        1. Reserves hotel hold via Hotel Sub-Agent -> generates reference task ID.
-        2. Searches dining recommendations via Restaurant Sub-Agent passing reference task ID.
-        3. Executes verification & payment confirmation via Task-based Verification Sub-Agent.
-        4. Calculates end-to-end token consumption, cache hit rate, and operational cost.
+        1. Model Armor scan on user inputs.
+        2. Dynamic Model Escalation evaluation (gemini-3.5-flash -> gemini-3.5).
+        3. Reserves hotel hold via Hotel Sub-Agent -> generates reference task ID.
+        4. Searches dining recommendations via Restaurant Sub-Agent passing reference task ID.
+        5. Executes verification & payment confirmation via Task-based Verification Sub-Agent.
+        6. Tracks cumulative token consumption and cost against $5.00 project budget.
         """
+        # Step 0: Model Armor Guardrail
+        guard_prompt(destination)
+        guard_prompt(dining_query)
+
         trip_context_id = context_id or f"ctx-{destination.lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}"
 
         with tracer.start_as_current_span("orchestrate_trip_planning") as root_span:
             root_span.set_attribute("a2a.context_id", trip_context_id)
             root_span.set_attribute("a2a.destination", destination)
+            root_span.set_attribute("gen_ai.root_agent.prompt", f"Destination: {destination} | Dining: {dining_query}")
+
+            # Dynamic Model Escalation Check
+            combined_request = f"{destination} {dining_query}"
+            escalation = default_escalator.evaluate_request(
+                combined_request,
+                context_history_turns=0,
+                span=root_span,
+                agent_name="root_agent",
+            )
 
             logger.info(f"=== Starting Travel Concierge Pipeline [Context: {trip_context_id}] ===")
+            logger.info(
+                f"[root_agent Context Management] Active Model: {escalation.active_model} "
+                f"(Escalated: {escalation.escalated}). "
+                f"Using Explicit Context Cache '{self.cached_content_name}' for system prompt and tool definitions."
+            )
 
             # Step 1: Delegate to Hotel Sub-Agent
             hotel_result = self.hotel_agent.search_and_hold_hotel(
@@ -136,20 +166,177 @@ class TravelConciergeRootAgent:
                 completion_tokens=total_completion_tokens,
             )
 
+            # Record Spend against the $5.00 Project Budget
+            budget_state = project_budget.record_spend(
+                cost_usd=aggregate_metrics.cost_usd,
+                prompt_tokens=total_prompt_tokens,
+                cached_tokens=total_cached_tokens,
+                completion_tokens=total_completion_tokens,
+            )
+
             root_span.set_attribute("llm.pipeline.total_tokens", aggregate_metrics.total_tokens)
             root_span.set_attribute("llm.pipeline.cached_tokens", aggregate_metrics.cached_tokens)
             root_span.set_attribute("llm.pipeline.cache_hit_rate", aggregate_metrics.cache_hit_rate)
             root_span.set_attribute("llm.pipeline.cost_usd", aggregate_metrics.cost_usd)
+            root_span.set_attribute("budget.utilized_percent", budget_state.budget_utilized_percent)
+            root_span.set_attribute("budget.remaining_usd", budget_state.remaining_budget_usd)
 
             logger.info(f"=== Travel Concierge Pipeline Completed ===")
-            logger.info(f"Total Tokens: {aggregate_metrics.total_tokens} | Cached: {aggregate_metrics.cached_tokens} ({aggregate_metrics.cache_hit_rate:.1%})")
-            logger.info(f"Pipeline Estimated Cost: ${aggregate_metrics.cost_usd:.6f}")
+            logger.info(
+                f"Total Tokens: {aggregate_metrics.total_tokens} | Cached: {aggregate_metrics.cached_tokens} "
+                f"({aggregate_metrics.cache_hit_rate:.1%}) | Cost: ${aggregate_metrics.cost_usd:.6f}"
+            )
+            logger.info(
+                f"[Budget Status] Project Spend: ${budget_state.cumulative_cost_usd:.4f} / ${budget_state.budget_limit_usd:.2f} "
+                f"({budget_state.budget_utilized_percent:.1f}% used, ${budget_state.remaining_budget_usd:.4f} remaining)"
+            )
 
-            return {
+            result_payload = {
                 "context_id": trip_context_id,
                 "destination": destination,
+                "model_escalation": escalation.to_dict(),
                 "hotel_booking": hotel_result,
                 "restaurant_recommendations": restaurant_result,
                 "verification": verification_result,
                 "telemetry": aggregate_metrics.to_dict(),
+                "budget": budget_state.to_dict(),
             }
+
+            # Save state for multi-turn conversational refinements
+            self.sessions[trip_context_id] = {
+                "destination": destination,
+                "dining_query": dining_query,
+                "hotel_task_id": hotel_task_id,
+                "last_result": result_payload,
+                "turn_count": 1,
+                "history": [
+                    {"turn": 1, "prompt": f"Plan trip to {destination} with {dining_query}", "result": result_payload}
+                ],
+            }
+
+            return result_payload
+
+    def refine_itinerary(
+        self,
+        context_id: str,
+        refinement_query: str,
+        token_claims: Optional[Dict[str, Any]] = None,
+        auto_confirm_booking: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Multi-turn conversational refinement method.
+        Processes user feedback (e.g. 'Switch to 5-star hotel' or 'Find cheaper vegan ramen'),
+        evaluates escalation, updates subagents, and preserves the full trace lineage.
+        """
+        # Step 0: Model Armor Guardrail on refinement prompt
+        guard_prompt(refinement_query)
+
+        session = self.sessions.get(context_id)
+        if not session:
+            logger.warning(f"Session '{context_id}' not found. Initializing new trip context.")
+            return self.plan_trip(destination="Tokyo Shinjuku", dining_query=refinement_query, context_id=context_id)
+
+        turn_index = session["turn_count"] + 1
+        session["turn_count"] = turn_index
+
+        with tracer.start_as_current_span(f"refine_itinerary_turn_{turn_index}") as span:
+            span.set_attribute("a2a.context_id", context_id)
+            span.set_attribute("a2a.refinement_turn", turn_index)
+            span.set_attribute("gen_ai.root_agent.refinement_prompt", refinement_query)
+
+            # Model Escalation Check with multi-turn depth
+            escalation = default_escalator.evaluate_request(
+                refinement_query,
+                context_history_turns=turn_index,
+                span=span,
+                agent_name="root_agent",
+            )
+
+            logger.info(
+                f"[root_agent Context Management] Multi-turn Refinement Turn {turn_index} for Context: {context_id}. "
+                f"Technique: Incremental Conversation History Compaction (Summarizing turns 1..{turn_index-1} into reference task IDs). "
+                f"Model Active: {escalation.active_model}"
+            )
+
+            destination = session["destination"]
+            hotel_task_id = session["hotel_task_id"]
+
+            refine_lower = refinement_query.lower()
+            hotel_updated = False
+            restaurant_updated = False
+
+            # Check if refinement targets hotel
+            if any(k in refine_lower for k in ["hotel", "room", "stay", "resort", "suite", "checkin"]):
+                logger.info(f"[Multi-turn] Refining hotel accommodation for '{destination}'...")
+                hotel_result = self.hotel_agent.search_and_hold_hotel(
+                    context_id=context_id,
+                    location=f"{destination} (Refined: {refinement_query})",
+                )
+                hotel_task_id = hotel_result.get("task_id", hotel_task_id)
+                session["hotel_task_id"] = hotel_task_id
+                hotel_updated = True
+            else:
+                hotel_result = session["last_result"]["hotel_booking"]
+
+            # Check if refinement targets dining or general
+            if any(k in refine_lower for k in ["food", "restaurant", "ramen", "dinner", "lunch", "vegan", "diet", "curry", "cheap"]) or not hotel_updated:
+                logger.info(f"[Multi-turn] Refining dining options for '{destination}'...")
+                restaurant_result = self.restaurant_agent.find_dining_options(
+                    context_id=context_id,
+                    query=f"{refinement_query} near {destination}",
+                    reference_task_ids=[hotel_task_id],
+                    token_claims=token_claims,
+                )
+                restaurant_updated = True
+            else:
+                restaurant_result = session["last_result"]["restaurant_recommendations"]
+
+            # Re-verify if any booking or pricing changed
+            verification_result = self.verification_agent.run_verification_task(
+                context_id=context_id,
+                reference_task_ids=[hotel_task_id],
+                user_auto_confirm=auto_confirm_booking,
+            )
+
+            # Aggregate turn metrics
+            metrics_list = []
+            if hotel_updated:
+                metrics_list.append(hotel_result.get("metrics"))
+            if restaurant_updated:
+                metrics_list.append(restaurant_result.get("metrics"))
+            metrics_list.append(verification_result.get("metrics"))
+
+            total_prompt_tokens = sum(m["prompt_tokens"] for m in metrics_list if m)
+            total_cached_tokens = sum(m["cached_tokens"] for m in metrics_list if m)
+            total_completion_tokens = sum(m["completion_tokens"] for m in metrics_list if m)
+
+            aggregate_metrics = calculate_token_cost(
+                prompt_tokens=total_prompt_tokens,
+                cached_tokens=total_cached_tokens,
+                completion_tokens=total_completion_tokens,
+            )
+
+            budget_state = project_budget.record_spend(
+                cost_usd=aggregate_metrics.cost_usd,
+                prompt_tokens=total_prompt_tokens,
+                cached_tokens=total_cached_tokens,
+                completion_tokens=total_completion_tokens,
+            )
+
+            refined_result = {
+                "context_id": context_id,
+                "turn": turn_index,
+                "refinement_query": refinement_query,
+                "model_escalation": escalation.to_dict(),
+                "hotel_booking": hotel_result,
+                "restaurant_recommendations": restaurant_result,
+                "verification": verification_result,
+                "telemetry": aggregate_metrics.to_dict(),
+                "budget": budget_state.to_dict(),
+            }
+
+            session["last_result"] = refined_result
+            session["history"].append({"turn": turn_index, "prompt": refinement_query, "result": refined_result})
+
+            logger.info(f"=== Multi-turn Refinement Complete (Turn {turn_index}) ===")
+            return refined_result
