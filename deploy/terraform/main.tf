@@ -135,6 +135,14 @@ resource "google_cloud_run_v2_service" "hotel_agent" {
         name  = "RESOURCE_TAG"
         value = "FDEDEMO"
       }
+      env {
+        name  = "ENABLE_CLOUD_TRACE"
+        value = "true"
+      }
+      env {
+        name  = "OTEL_EXPORTER_TYPE"
+        value = "gcp"
+      }
     }
   }
 }
@@ -203,6 +211,14 @@ resource "google_cloud_run_v2_service" "restaurant_agent" {
         name  = "RESOURCE_TAG"
         value = "FDEDEMO"
       }
+      env {
+        name  = "ENABLE_CLOUD_TRACE"
+        value = "true"
+      }
+      env {
+        name  = "OTEL_EXPORTER_TYPE"
+        value = "gcp"
+      }
     }
   }
 }
@@ -270,6 +286,14 @@ resource "google_cloud_run_v2_service" "verification_agent" {
       env {
         name  = "RESOURCE_TAG"
         value = "FDEDEMO"
+      }
+      env {
+        name  = "ENABLE_CLOUD_TRACE"
+        value = "true"
+      }
+      env {
+        name  = "OTEL_EXPORTER_TYPE"
+        value = "gcp"
       }
     }
   }
@@ -357,6 +381,14 @@ resource "google_cloud_run_v2_service" "agent_gateway" {
         name  = "RESOURCE_TAG"
         value = "FDEDEMO"
       }
+      env {
+        name  = "ENABLE_CLOUD_TRACE"
+        value = "true"
+      }
+      env {
+        name  = "OTEL_EXPORTER_TYPE"
+        value = "gcp"
+      }
     }
   }
 }
@@ -433,6 +465,10 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
       env {
         name  = "ENABLE_CLOUD_TRACE"
         value = "true"
+      }
+      env {
+        name  = "OTEL_EXPORTER_TYPE"
+        value = "gcp"
       }
       env {
         name  = "RESOURCE_TAG"

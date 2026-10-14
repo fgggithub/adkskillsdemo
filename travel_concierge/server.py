@@ -8,7 +8,7 @@ from fastapi import FastAPI, Header, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 
 from travel_concierge.config import settings
-from travel_concierge.telemetry.tracer import init_tracer
+from travel_concierge.telemetry.tracer import init_tracer, flush_tracer, TraceContextMiddleware
 from travel_concierge.agents.root_agent import TravelConciergeRootAgent
 from travel_concierge.security.auth_guardrails import validate_agent_gateway_headers
 
@@ -27,6 +27,7 @@ app = FastAPI(
 
 # Enforce Agent Gateway Policy (Zero-Trust & Model Armor) on all incoming requests
 app.add_middleware(GatewayPolicyMiddleware, policy=default_gateway_policy)
+app.add_middleware(TraceContextMiddleware)
 
 # Mount Web Portal (Discovery Engine StreamAssist Webapp)
 app.include_router(portal_router)
@@ -129,6 +130,8 @@ async def plan_trip_endpoint(req: TripPlanRequest, request: Request):
     except Exception as e:
         logger.exception("Error executing trip planning")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        flush_tracer()
 
 
 @app.post("/v1/trips/refine")
@@ -160,6 +163,8 @@ async def refine_trip_endpoint(req: TripRefineRequest, request: Request):
     except Exception as e:
         logger.exception("Error executing trip refinement")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        flush_tracer()
 
 
 @app.post("/a2a/webhooks/push")

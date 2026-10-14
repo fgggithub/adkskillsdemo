@@ -144,6 +144,22 @@ def test_gateway_enforces_caller_spiffe_identity():
     assert "Proxy-Authorization" in resp.json()["detail"]
 
 
+def test_gateway_accepts_x_proxy_authorization_header():
+    """Validates PEP accepts X-Proxy-Authorization when hop-by-hop headers are stripped by reverse proxies."""
+    caller_token = f"Bearer {DEFAULT_CALLER_SPIFFE}"
+    target_token = f"Bearer {DEFAULT_SUBAGENT_TOKENS['hotel-booking-specialist']}"
+    resp = gateway_client.post(
+        "/v1/agents/hotel_booking_specialist/messages",
+        json={"location": "Tokyo Shinjuku", "parts": [{"text": "Search and hold hotel"}]},
+        headers={
+            "X-Proxy-Authorization": caller_token,
+            "Authorization": target_token,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "held"
+
+
 def test_gateway_enforces_audience_bound_token():
     """Validates PEP blocks calls with tokens bound to the wrong subagent."""
     caller_token = f"Bearer {DEFAULT_CALLER_SPIFFE}"

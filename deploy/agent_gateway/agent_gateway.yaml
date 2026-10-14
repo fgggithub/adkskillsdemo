@@ -1,0 +1,12 @@
+# Google Cloud Agent Platform - Managed Agent Gateway Definition
+# Documentation: https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/agent-gateway-overview
+name: travel-concierge-gateway
+description: "Travel Concierge Managed Agent Gateway (Google Cloud Agent Platform)"
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+labels:
+  environment: dev
+  managed-by: agent-platform
+  project: travel-concierge

@@ -1,0 +1,12 @@
+# Model Armor AuthzPolicy targeting the Managed Agent Gateway
+# Documentation: https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/delegate-authorization
+name: travel-concierge-ma-policy
+target:
+  resources:
+    - "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/agentGateways/travel-concierge-gateway"
+policyProfile: CONTENT_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/authzExtensions/travel-concierge-ma-ext"

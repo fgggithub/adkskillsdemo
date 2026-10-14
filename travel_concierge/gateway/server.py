@@ -21,7 +21,7 @@ from travel_concierge.security.gateway_policy import (
     GatewayPolicyViolationError,
     default_gateway_policy,
 )
-from travel_concierge.telemetry.tracer import get_tracer, inject_trace_context
+from travel_concierge.telemetry.tracer import get_tracer, inject_trace_context, TraceContextMiddleware
 
 # Import subagent apps for in-process ASGI fallback
 from travel_concierge.services.hotel_service import app as hotel_app
@@ -36,6 +36,8 @@ app = FastAPI(
     version="2.0.0",
     description="Central Policy Enforcement Point enforcing Zero-Trust identity, audience binding, and Model Armor.",
 )
+
+app.add_middleware(TraceContextMiddleware)
 
 # Gateway policy instance with strict Zero-Trust & Model Armor
 gateway_pep_policy = AgentGatewayPolicy(enforce_model_armor=True, enforce_auth_headers=True)
@@ -101,6 +103,8 @@ async def route_agent_message(
     request: Request,
     proxy_authorization: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None),
+    x_proxy_authorization: Optional[str] = Header(None),
+    x_caller_identity: Optional[str] = Header(None),
 ):
     """
     Central Zero-Trust PEP Route.
@@ -120,7 +124,17 @@ async def route_agent_message(
         body_bytes = await request.body()
 
         # Step 1: Enforce Zero-Trust Headers
-        if not proxy_authorization or not proxy_authorization.startswith("Bearer "):
+        # Note: Standard reverse proxies (like Google Cloud Run / GFE) strip hop-by-hop 'Proxy-Authorization' headers.
+        # Fall back gracefully to X-Proxy-Authorization or X-Caller-Identity.
+        caller_auth = (
+            proxy_authorization
+            or x_proxy_authorization
+            or x_caller_identity
+            or request.headers.get("x-proxy-authorization")
+            or request.headers.get("x-caller-identity")
+            or request.headers.get("proxy-authorization")
+        )
+        if not caller_auth or not caller_auth.startswith("Bearer "):
             span.set_attribute("gateway.policy.blocked", True)
             span.set_attribute("gateway.policy.reason", "missing_proxy_authorization")
             return JSONResponse(
@@ -128,7 +142,7 @@ async def route_agent_message(
                 content={
                     "error": "Unauthorized",
                     "policy": "Agent Gateway Zero-Trust Policy",
-                    "detail": "Missing or invalid Proxy-Authorization header (Caller SPIFFE Identity required).",
+                    "detail": "Missing or invalid Proxy-Authorization / X-Proxy-Authorization header (Caller SPIFFE Identity required).",
                 },
             )
 

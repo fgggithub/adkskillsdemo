@@ -42,3 +42,8 @@ output "gateway_card_url" {
   description = "A2A Agent Card Discovery URL for Agent Gateway"
   value       = "${google_cloud_run_v2_service.agent_gateway.uri}/.well-known/agent-card.json"
 }
+
+output "agent_platform_gateway_name" {
+  description = "Fully-qualified resource name of the Google Cloud Agent Platform Agent Gateway"
+  value       = "projects/${var.project_id}/locations/${var.region}/agentGateways/travel-concierge-gateway"
+}

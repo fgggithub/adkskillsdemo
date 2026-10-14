@@ -56,8 +56,8 @@ class GenerationGuardrailsConfig:
 @dataclass
 class Settings:
     """Global application settings."""
-    project_id: str = os.getenv("GOOGLE_CLOUD_PROJECT", "my-gcp-project")
-    location: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    project_id: str = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("PROJECT_ID", "my-gcp-project")
+    location: str = os.getenv("GOOGLE_CLOUD_LOCATION") or os.getenv("LOCATION", "us-central1")
     model_name: str = os.getenv("MODEL_NAME", "gemini-3.5-flash")
     base_model_name: str = os.getenv("BASE_MODEL_NAME", "gemini-3.5-flash")
     escalated_model_name: str = os.getenv("ESCALATED_MODEL_NAME", "gemini-3.5")

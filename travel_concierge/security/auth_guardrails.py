@@ -86,7 +86,7 @@ def build_gateway_headers(
     """
     Builds Agent Gateway Zero-Trust headers:
     1. W3C Trace Context (OpenTelemetry)
-    2. Proxy-Authorization: Caller's Agent Identity / SPIFFE token for PEP policy verification
+    2. Proxy-Authorization & X-Proxy-Authorization: Caller's Agent Identity / SPIFFE token for PEP policy verification
     3. Authorization: Audience-bound token for downstream target subagent
     """
     headers = dict(extra_headers or {})
@@ -94,6 +94,8 @@ def build_gateway_headers(
 
     if caller_spiffe_gateway_token:
         headers["Proxy-Authorization"] = f"Bearer {caller_spiffe_gateway_token}"
+        headers["X-Proxy-Authorization"] = f"Bearer {caller_spiffe_gateway_token}"
+        headers["X-Caller-Identity"] = f"Bearer {caller_spiffe_gateway_token}"
 
     if target_subagent_access_token:
         headers["Authorization"] = f"Bearer {target_subagent_access_token}"
@@ -135,7 +137,14 @@ def validate_agent_gateway_headers(headers: Dict[str, str], expected_audience: O
     When expected_audience is specified, validates that the target token in
     Authorization is audience-bound to the downstream agent.
     """
-    proxy_auth = headers.get("Proxy-Authorization") or headers.get("proxy-authorization")
+    proxy_auth = (
+        headers.get("Proxy-Authorization")
+        or headers.get("proxy-authorization")
+        or headers.get("X-Proxy-Authorization")
+        or headers.get("x-proxy-authorization")
+        or headers.get("X-Caller-Identity")
+        or headers.get("x-caller-identity")
+    )
     auth = headers.get("Authorization") or headers.get("authorization")
 
     if not proxy_auth or not proxy_auth.startswith("Bearer "):

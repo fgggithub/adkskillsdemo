@@ -24,16 +24,12 @@ from travel_concierge.tools.skill_registry import GCPSkillRegistry, SkillToolset
 
 from opentelemetry import trace
 from opentelemetry.propagate import inject
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from travel_concierge.telemetry.tracer import init_tracer, flush_tracer
 
 # ==============================================================================
 # 1. OpenTelemetry Initialization & Pricing Constants
 # ==============================================================================
-trace.set_tracer_provider(TracerProvider())
-tracer_provider = trace.get_tracer_provider()
-tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-tracer = trace.get_tracer("travel_concierge_a2a_tracer")
+tracer = init_tracer("travel_concierge_demo")
 
 # Token Pricing Constants (Gemini 2.5 Flash)
 INPUT_PRICE_PER_1M = 0.30
@@ -352,7 +348,10 @@ def run_travel_trip_pipeline():
 
 
 if __name__ == "__main__":
-    run_travel_trip_pipeline()
+    try:
+        run_travel_trip_pipeline()
+    finally:
+        flush_tracer()
 
 
 """

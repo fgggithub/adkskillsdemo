@@ -12,6 +12,11 @@ echo "==========================================================================
 echo "    STARTING TEARDOWN: TRAVEL CONCIERGE (FDEDEMO)                         "
 echo "=========================================================================="
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+export PATH="${HOME}/.local/bin:${PATH}"
+
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo '')}"
 REGION="${REGION:-us-central1}"
 REPO_NAME="travel-concierge-repo"

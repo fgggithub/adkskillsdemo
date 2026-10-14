@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from travel_concierge.tools.mock_services import MockHotelService, MockUsageMetadata
 from travel_concierge.security.auth_guardrails import extract_token_claims
-from travel_concierge.telemetry.tracer import get_tracer
+from travel_concierge.telemetry.tracer import get_tracer, TraceContextMiddleware
 
 logger = logging.getLogger("travel_concierge.services.hotel")
 tracer = get_tracer("travel_concierge.services.hotel")
@@ -19,6 +19,7 @@ app = FastAPI(
     version="2.0.0",
     description="Decoupled subagent service for hotel accommodation search and hold.",
 )
+app.add_middleware(TraceContextMiddleware)
 
 
 def verify_hotel_audience(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:

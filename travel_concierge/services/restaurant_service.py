@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from travel_concierge.tools.mcp_toolset import execute_zomato_search
 from travel_concierge.tools.skill_registry import evaluate_dietary_compliance
 from travel_concierge.security.auth_guardrails import extract_token_claims
-from travel_concierge.telemetry.tracer import get_tracer
+from travel_concierge.telemetry.tracer import get_tracer, TraceContextMiddleware
 
 logger = logging.getLogger("travel_concierge.services.restaurant")
 tracer = get_tracer("travel_concierge.services.restaurant")
@@ -21,6 +21,7 @@ app = FastAPI(
     version="2.0.0",
     description="Decoupled subagent service for restaurant discovery and dietary compliance.",
 )
+app.add_middleware(TraceContextMiddleware)
 
 
 def verify_restaurant_audience(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:

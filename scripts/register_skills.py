@@ -295,7 +295,7 @@ def register_all_skills(project_id: str, location: str) -> List[Dict[str, Any]]:
         registry.register_skill(skill_name, exec_fn, metadata=registration_payload)
         logger.info(f"✓ Registered '{skill_name}' into local GCPSkillRegistry.")
 
-        # 2. GCP Cloud Agent Registry
+        # 2. GCP Cloud Agent Registry (Skills catalog is hosted globally in Agent Registry)
         cloud_success = register_to_gcp_agent_registry_skill(
             project_id=project_id,
             skill_name=cloud_skill_id,
@@ -315,8 +315,7 @@ def main():
     parser.add_argument("--project-id", type=str, default=None, help="GCP Project ID")
     parser.add_argument("--location", type=str, default=None, help="GCP Region/Location")
     args = parser.parse_args()
-
-    project_id = args.project_id or settings.project_id or "qwiklabs-gcp-04-0f982849de12"
+    project_id = args.project_id or os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or settings.project_id
     location = args.location or settings.location or "global"
 
     print("\n" + "=" * 65)

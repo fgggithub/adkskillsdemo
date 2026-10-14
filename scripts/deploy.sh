@@ -12,6 +12,10 @@ echo "==========================================================================
 echo "    STARTING REPRODUCIBLE DEPLOYMENT: TRAVEL CONCIERGE (FDEDEMO)         "
 echo "=========================================================================="
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo '')}"
 REGION="${REGION:-us-central1}"
 SERVICE_NAME="travel-concierge-orchestrator"
@@ -26,13 +30,18 @@ export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
 
 echo "[1/6] Target GCP Project: ${PROJECT_ID} in ${REGION}"
 
+# Step 0: Ensure local Python environment and requirements.txt are installed
+echo "      Installing required Python dependencies from requirements.txt..."
+export PATH="${HOME}/.local/bin:${PATH}"
+python3 -m pip install -q -r "${REPO_ROOT}/requirements.txt" 2>/dev/null || python3 -m pip install -q --break-system-packages -r "${REPO_ROOT}/requirements.txt"
+
 # Step 1: Enable APIs
 echo "[2/6] Enabling APIs..."
 bash scripts/enable_apis.sh
 
 # Step 2: Register Skills in GCP Agent Runtime Skills Registry
 echo "[3/6] Registering ADK dietary_advisor Skill in Agent Runtime..."
-python3 scripts/register_skills.py
+python3 scripts/register_skills.py --project-id="${PROJECT_ID}" --location="${REGION}"
 
 # Step 3: Initialize and Apply Terraform for Core Infrastructure
 echo "[4/6] Initializing Terraform infrastructure..."
@@ -79,8 +88,39 @@ gcloud run services update "${SERVICE_NAME}" \
   --quiet
 
 # Verification across all 5 deployed microservices
-GATEWAY_URL=$(gcloud run services describe "agent-gateway-pep" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || terraform -chdir=deploy/terraform output -raw agent_gateway_url 2>/dev/null || echo "")
-SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || terraform -chdir=deploy/terraform output -raw service_url 2>/dev/null || echo "")
+resolve_deploy_url() {
+  local service_name="$1"
+  local tf_output_key="$2"
+  local url=""
+
+  if [[ -n "${PROJECT_ID}" ]]; then
+    url=$(gcloud run services describe "${service_name}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || echo "")
+  fi
+  if [[ -z "${url}" || ! "${url}" =~ ^https?:// ]] && [[ -f "deploy/terraform/terraform.tfstate" ]]; then
+    url=$(python3 -c '
+import json, sys
+try:
+    with open("deploy/terraform/terraform.tfstate") as f:
+        data = json.load(f)
+    print(data.get("outputs", {}).get("'"${tf_output_key}"'", {}).get("value", "") or "")
+except Exception:
+    pass
+' 2>/dev/null || echo "")
+  fi
+  if [[ -z "${url}" || ! "${url}" =~ ^https?:// ]] && command -v terraform >/dev/null 2>&1; then
+    if terraform version 2>&1 | grep -q 'Terraform v'; then
+      url=$(terraform -chdir=deploy/terraform output -raw "${tf_output_key}" 2>/dev/null || echo "")
+    fi
+  fi
+  if [[ "${url}" =~ ^https?:// ]]; then
+    echo "${url}"
+  else
+    echo ""
+  fi
+}
+
+GATEWAY_URL=$(resolve_deploy_url "agent-gateway-pep" "agent_gateway_url")
+SERVICE_URL=$(resolve_deploy_url "${SERVICE_NAME}" "service_url")
 
 echo "[+] Root Orchestrator deployed at: ${SERVICE_URL}"
 echo "[+] Agent Gateway PEP deployed at: ${GATEWAY_URL}"

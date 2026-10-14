@@ -43,7 +43,7 @@ def get_default_project_id() -> str:
             return res.stdout.strip()
     except Exception:
         pass
-    return settings.project_id or "qwiklabs-gcp-04-0f982849de12"
+    return os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or settings.project_id or ""
 
 
 def get_service_url(service_name: str, region: str, project_id: str) -> Optional[str]:

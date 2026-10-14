@@ -5,8 +5,12 @@ import logging
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
-from google.adk.tools import McpToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+try:
+    from google.adk.tools import McpToolset
+    from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+except (ImportError, ModuleNotFoundError):
+    McpToolset = None  # type: ignore
+    StreamableHTTPConnectionParams = None  # type: ignore
 
 from travel_concierge.config import settings
 from travel_concierge.security.circuit_breaker import MCPCircuitBreaker
@@ -63,10 +67,14 @@ def execute_zomato_search(
     }
 
 
-def get_zomato_mcp_toolset(url: Optional[str] = None) -> McpToolset:
+def get_zomato_mcp_toolset(url: Optional[str] = None) -> Any:
     """
     Factory creating a configured McpToolset instance with GCP Identity Token authentication.
     """
+    if McpToolset is None or StreamableHTTPConnectionParams is None:
+        raise ImportError(
+            "mcp package is required for McpToolset. Install with: pip install -r requirements.txt"
+        )
     endpoint_url = url or settings.endpoints.zomato_mcp_url
     return McpToolset(
         connection_params=StreamableHTTPConnectionParams(
