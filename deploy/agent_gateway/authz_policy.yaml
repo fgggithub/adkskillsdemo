@@ -3,10 +3,10 @@
 name: travel-concierge-ma-policy
 target:
   resources:
-    - "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/agentGateways/travel-concierge-gateway"
+    - "projects/qwiklabs-gcp-01-fcc739175875/locations/us-central1/agentGateways/travel-concierge-gateway"
 policyProfile: CONTENT_AUTHZ
 action: CUSTOM
 customProvider:
   authzExtension:
     resources:
-      - "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/authzExtensions/travel-concierge-ma-ext"
+      - "projects/qwiklabs-gcp-01-fcc739175875/locations/us-central1/authzExtensions/travel-concierge-ma-ext"

@@ -489,9 +489,9 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
           port = 8080
         }
         initial_delay_seconds = 10
-        period_seconds        = 5
-        failure_threshold     = 10
-        timeout_seconds       = 4
+        period_seconds        = 10
+        failure_threshold     = 30
+        timeout_seconds       = 5
       }
 
       liveness_probe {

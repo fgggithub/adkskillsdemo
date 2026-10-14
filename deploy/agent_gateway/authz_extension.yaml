@@ -5,8 +5,8 @@ service: modelarmor.us-central1.rep.googleapis.com
 metadata:
   model_armor_settings: '[
     {
-      "response_template_id": "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/templates/travel-concierge-ma-template",
-      "request_template_id": "projects/qwiklabs-gcp-01-7536cd3077a6/locations/us-central1/templates/travel-concierge-ma-template"
+      "response_template_id": "projects/qwiklabs-gcp-01-fcc739175875/locations/us-central1/templates/travel-concierge-ma-template",
+      "request_template_id": "projects/qwiklabs-gcp-01-fcc739175875/locations/us-central1/templates/travel-concierge-ma-template"
     }
   ]'
 failOpen: false

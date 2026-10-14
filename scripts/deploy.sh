@@ -45,6 +45,12 @@ python3 scripts/register_skills.py --project-id="${PROJECT_ID}" --location="${RE
 
 # Step 3: Initialize and Apply Terraform for Core Infrastructure
 echo "[4/6] Initializing Terraform infrastructure..."
+if [[ -f "deploy/terraform/terraform.tfstate" ]] && grep -q '"project":' "deploy/terraform/terraform.tfstate"; then
+  if ! grep -q "\"${PROJECT_ID}\"" "deploy/terraform/terraform.tfstate"; then
+    echo "      Detected state from a different project. Clearing stale state..."
+    rm -f deploy/terraform/terraform.tfstate deploy/terraform/terraform.tfstate.backup
+  fi
+fi
 terraform -chdir=deploy/terraform init -input=false
 chmod -R +x deploy/terraform/.terraform/providers 2>/dev/null || true
 
