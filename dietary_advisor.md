@@ -1,5 +1,5 @@
 ---
-name: dietary_advisor
+name: dietary-advisor
 description: Rules for filtering dining options based on dietary restrictions, allergies, and safety ratings. Use when evaluating restaurant safety or food standards.
 ---
 

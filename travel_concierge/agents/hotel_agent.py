@@ -53,7 +53,7 @@ class HotelAgentWrapper:
     handshakes, task token creation, and telemetry tracing.
     """
 
-    def __init__(self, agent: Optional[RemoteA2aAgent] = None, use_gateway: bool = False):
+    def __init__(self, agent: Optional[RemoteA2aAgent] = None, use_gateway: bool = True):
         self.use_gateway = use_gateway
         self.agent = agent or create_hotel_subagent(use_gateway=use_gateway)
 
@@ -77,7 +77,7 @@ class HotelAgentWrapper:
 
             headers = build_gateway_headers(
                 caller_spiffe_gateway_token=caller_spiffe_token or "spiffe://prod.corp/agent/travel-concierge",
-                target_subagent_access_token=target_token or "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImF1ZCI6ImhvdGVsLXNwZWNpYWxpc3QifQ",
+                target_subagent_access_token=target_token or "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImF1ZCI6ImhvdGVsLXNwZWNpYWxpc3QifQ.payload.sig",
             )
 
             message_payload = {
@@ -89,14 +89,43 @@ class HotelAgentWrapper:
                 ],
             }
 
-            try:
-                if hasattr(self.agent, "send_message"):
-                    response = self.agent.send_message(message=message_payload, headers=headers)
-                else:
+            response = None
+            task_id = "task-hotel-shinjuku-99"
+
+            if self.use_gateway:
+                try:
+                    from travel_concierge.gateway.client import send_gateway_message
+                    gateway_res = send_gateway_message(
+                        agent_name="hotel_booking_specialist",
+                        payload=message_payload,
+                        caller_spiffe_token=caller_spiffe_token,
+                        target_token=target_token,
+                        extra_headers=headers,
+                    )
+                    task_id = gateway_res.get("task_id") or gateway_res.get("taskId") or "task-hotel-shinjuku-99"
+                    held_hotel = gateway_res.get("hotel")
+                    response = MockAgentResponse(
+                        text=f'{{"status": "held", "hotel": "{held_hotel.get("name") if held_hotel else "Hotel"}", "taskId": "{task_id}"}}',
+                        usage_metadata=MockUsageMetadata(
+                            prompt_token_count=gateway_res.get("metrics", {}).get("prompt_tokens", 1800),
+                            cached_content_token_count=gateway_res.get("metrics", {}).get("cached_tokens", 1350),
+                            candidates_token_count=gateway_res.get("metrics", {}).get("completion_tokens", 120),
+                            total_token_count=gateway_res.get("metrics", {}).get("total_tokens", 1920),
+                        ),
+                        status="held",
+                        data=gateway_res,
+                    )
+                except Exception as e:
+                    logger.warning(f"Gateway hotel delegation fallback: {e}")
                     response = None
-            except Exception as e:
-                logger.warning(f"Remote hotel A2A live call fallback: {e}")
-                response = None
+
+            if response is None:
+                try:
+                    if hasattr(self.agent, "send_message"):
+                        response = self.agent.send_message(message=message_payload, headers=headers)
+                except Exception as e:
+                    logger.warning(f"Remote hotel A2A live call fallback: {e}")
+                    response = None
 
             if response is None:
                 hotel_data = MockHotelService.search_hotels(location, checkin, checkout, guests)
@@ -115,7 +144,7 @@ class HotelAgentWrapper:
                     data={"hotel": held_hotel, "taskId": task_id},
                 )
             else:
-                task_id = "task-hotel-shinjuku-99"
+                task_id = getattr(response, "data", {}).get("taskId", task_id) if hasattr(response, "data") and isinstance(response.data, dict) else task_id
 
             # Model Escalation evaluation
             from travel_concierge.agents.model_escalator import default_escalator

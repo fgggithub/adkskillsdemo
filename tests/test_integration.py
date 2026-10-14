@@ -141,3 +141,25 @@ def test_refine_trip_api_endpoint():
     assert data["status"] == "success"
     assert data["turn"] == 2
     assert "telemetry" in data
+
+
+def test_terraform_configuration_validity():
+    import shutil
+    import subprocess
+    if not shutil.which("terraform"):
+        pytest.skip("terraform binary not installed in test environment")
+
+    res = subprocess.run(
+        ["terraform", "-chdir=deploy/terraform", "validate"],
+        capture_output=True,
+        text=True,
+    )
+    assert res.returncode == 0, f"Terraform validation failed: {res.stderr or res.stdout}"
+
+
+def test_teardown_residual_audit_function():
+    from scripts.cost_report import check_gcp_residual_resources
+    residuals = check_gcp_residual_resources()
+    assert isinstance(residuals, dict)
+    assert "clean" in residuals
+    assert "residual_monthly_cost_usd" in residuals

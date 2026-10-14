@@ -2,33 +2,39 @@
 
 ## 1. System Overview
 
-The **Travel Concierge Multi-Agent System** is an enterprise-grade agentic application built on the **Google Agent Development Kit (ADK)** and Python, exposing **Agent-to-Agent (A2A)** standard interfaces. It coordinates specialized subagents to deliver multi-turn travel itinerary planning, dietary compliance validation, hotel reservations, restaurant discovery via MCP (Model Context Protocol), and human-in-the-loop (HITL) payment verification.
+The **Travel Concierge Multi-Agent System** is an enterprise-grade agentic application built on the **Google Agent Development Kit (ADK)** and Python, exposing **Agent-to-Agent (A2A)** standard interfaces. It coordinates specialized, decoupled subagents to deliver multi-turn travel itinerary planning, dietary compliance validation, hotel reservations, restaurant discovery via MCP (Model Context Protocol), and human-in-the-loop (HITL) payment verification.
 
 All components adhere to the **Agent eXperience Interface (AXI)** methodology, **Zero-Trust networking**, **least-privilege IAM**, dynamic **Model Armor** defense, and automated **GCP Agent Runtime Skills Registry** integration.
+
+### Core Architecture Principle: Zero-Trust Gateway PEP Interception
+In compliance with enterprise Zero-Trust principles, **all communication from the Root Orchestrator Agent to Subagents must pass through the Agent Gateway Policy Enforcement Point (PEP)**. No direct or unverified subagent invocation is permitted. The Gateway strictly validates:
+1. **Caller Identity** via `Proxy-Authorization: Bearer <caller_spiffe_gateway_token>`
+2. **Target Audience Binding** via `Authorization: Bearer <target_subagent_token>` (preventing token reuse/confused deputy attacks)
+3. **Payload Sanitization** via **Model Armor** (inspecting all prompts/payloads for prompt injection, hate speech, and criminal activity)
 
 ```mermaid
 graph TD
     User([User / Browser]) -->|HTTP / HTML| PortalUI[Gemini Enterprise StreamAssist Web Portal<br/>Single-Page Application]
     PortalUI -->|SSE streamAssist API| StreamService[StreamAssist Service Bridge<br/>Discovery Engine Protocol]
-    StreamService -->|Inspect Payload| GatewayPolicy[Agent Gateway Policy / PEP<br/>Model Armor Guardrails]
-    GatewayPolicy -->|Zero-Trust Auth & W3C Trace| RootAgent[Root Orchestrator Agent<br/>GCP Agent Runtime]
-    AgentGateway[GCP Agent Gateway / PEP] -->|A2A / HTTPS Direct| RootAgent
+    StreamService -->|Inspect Payload| RootAgent[Root Orchestrator Agent<br/>travel-concierge-orchestrator<br/>Cloud Run / Agent Runtime]
     
-    subgraph Security & Policy ["Security & Policy Perimeter"]
-        ModelArmor[Model Armor<br/>Injection / Hate Speech / Crime Filter]
-        SSRF[SSRF Validator]
-        CircuitBreaker[MCP Circuit Breaker]
+    subgraph ZeroTrustGateway ["Agent Gateway Policy Enforcement Point (PEP)"]
+        GatewayServer[Agent Gateway Service<br/>agent-gateway-pep<br/>Cloud Run]
+        ModelArmor[Model Armor Filter<br/>Prompt Injection / Abuse / Crime]
+        AudienceVerifier[Zero-Trust Audience & SPIFFE Verifier]
+        GatewayServer --- ModelArmor
+        GatewayServer --- AudienceVerifier
+    end
+
+    subgraph Subagents ["Decoupled Cloud Run Subagents (Scale-to-Zero, FDEDEMO)"]
+        HotelAgent[Hotel Booking Specialist<br/>hotel-booking-specialist<br/>Port 8080]
+        RestaurantAgent[Restaurant Specialist<br/>restaurant-booking-specialist<br/>Port 8080]
+        VerificationAgent[Final Verification Agent<br/>final-verification-agent<br/>HITL Task Streaming]
     end
 
     subgraph SkillsRegistry ["GCP Agent Runtime Skills Registry"]
         DietarySkill[dietary_advisor<br/>Filter First, Rank Second]
         CompareRatings[scripts/compare_ratings.py<br/>NYC / UK / Tokyo Normalization]
-    end
-
-    subgraph Subagents ["Cloud Run Subagents (FDEDEMO)"]
-        HotelAgent[Hotel Booking Specialist<br/>Cloud Run]
-        RestaurantAgent[Restaurant Specialist<br/>Cloud Run]
-        VerificationAgent[Final Verification Agent<br/>HITL Task Streaming<br/>Cloud Run]
     end
 
     subgraph ExternalServices ["External Tools & Services"]
@@ -39,26 +45,23 @@ graph TD
 
     subgraph Observability ["Telemetry & Budgeting"]
         CloudTrace[Google Cloud Trace]
-        BudgetTracker[Budget & Cost Tracker<br/>$5.00 Hard Budget]
+        BudgetTracker[Budget & Cost Tracker<br/>$5.00 Hard Budget Cap]
         ContextCache[Vertex AI Context Cache<br/>75% Token Discount]
     end
 
-    RootAgent --> ModelArmor
     RootAgent --> ContextCache
     RootAgent --> BudgetTracker
     RootAgent --> CloudTrace
-    RootAgent --> DietarySkill
 
-    RootAgent -->|A2A Hold Request| HotelAgent
+    %% Zero-Trust Gateway Interception
+    RootAgent -->|1. Proxy-Auth + Aud-Bound Token| GatewayServer
+    GatewayServer -->|2. Validated Live Dispatch| HotelAgent
+    GatewayServer -->|2. Validated Live Dispatch| RestaurantAgent
+    GatewayServer -->|2. Validated Live Dispatch| VerificationAgent
+
     HotelAgent --> HotelService
-    HotelAgent -.->|Emits Task ID| RootAgent
-
-    RootAgent -->|A2A Query + Ref Task ID| RestaurantAgent
-    RestaurantAgent --> CircuitBreaker
-    CircuitBreaker --> SSRF
-    SSRF --> ZomatoMCP
-
-    RootAgent -->|A2A HITL Stream| VerificationAgent
+    RestaurantAgent --> DietarySkill
+    RestaurantAgent --> ZomatoMCP
     VerificationAgent --> PaymentGateway
 ```
 
@@ -66,80 +69,75 @@ graph TD
 
 ## 2. Component Topologies & Interaction Flows
 
-### 2.1 Multi-Agent Orchestration & A2A Communication
-1. **Root Orchestrator Agent (`travel_concierge_orchestrator`)**:
-   - Deployed to **GCP Agent Runtime**.
-   - Registered in **Gemini Enterprise Agent Registry** for natural discovery and invocation.
+### 2.1 Multi-Agent Orchestration & Zero-Trust A2A Communication
+1. **Root Orchestrator Agent (`travel-concierge-orchestrator`)**:
+   - Deployed to **Cloud Run / GCP Agent Runtime** (`min_instance_count = 0`).
    - Manages global session state, explicit context caching, token compaction, and multi-turn itinerary refinements.
-   - Features **dynamic model escalation** from `gemini-3.5-flash` to `gemini-3.5` (or `gemini-3.5-pro`) when constraint complexity or conflicting regional criteria require deeper reasoning.
-2. **Hotel Booking Specialist (`hotel_booking_specialist`)**:
-   - Deployed on **Cloud Run**.
-   - Receives destination, dates, and guest criteria; reserves temporary room holds and emits a durable `reference_task_id` (e.g., `task-hotel-shinjuku-99`).
-3. **Restaurant Specialist (`restaurant_booking_specialist`)**:
-   - Deployed on **Cloud Run**.
-   - Integrates with the **Zomato MCP Server** via secure streamable HTTP connection.
-   - Enforces IAM group membership (`MCPUSERS`) and OAuth 2.0 scope (`restaurants.read`).
+   - Features **dynamic model escalation** from `gemini-3.5-flash` to `gemini-3.5` when constraint complexity or conflicting regional criteria require deeper reasoning.
+   - Routes **all downstream requests through the Agent Gateway PEP** with caller SPIFFE identity (`spiffe://prod.corp/agent/travel-concierge`) and target audience tokens.
+2. **Agent Gateway PEP (`agent-gateway-pep`)**:
+   - Independent **Cloud Run** service acting as the central Policy Enforcement Point.
+   - Validates `Proxy-Authorization` and inspects `Authorization` audience binding before delegating.
+   - Applies active **Model Armor** inspection on all outbound request bodies to block prompt injections before they reach subagents.
+3. **Hotel Booking Specialist (`hotel-booking-specialist`)**:
+   - Independent **Cloud Run** microservice.
+   - Enforces audience claim (`hotel-booking-specialist`).
+   - Reserves temporary room holds and emits a durable `reference_task_id` (e.g., `task-hotel-shinjuku-99`).
+4. **Restaurant Specialist (`restaurant-booking-specialist`)**:
+   - Independent **Cloud Run** microservice.
+   - Enforces audience claim (`restaurant-booking-specialist`).
+   - Integrates with the **Zomato MCP Server** with IAM group membership (`MCPUSERS`) and OAuth 2.0 scope (`restaurants.read`).
    - Uses the `dietary_advisor` skill to filter and rank restaurants.
-4. **Final Verification Agent (`final_verification_agent`)**:
-   - Deployed on **Cloud Run**.
+5. **Final Verification Agent (`final-verification-agent`)**:
+   - Independent **Cloud Run** microservice.
+   - Enforces audience claim (`final-verification-agent`).
    - Manages asynchronous Human-in-the-Loop (HITL) task streaming with `input-required` state interrupts, confirming charges before final execution.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as User / Gemini Enterprise
-    participant GW as Agent Gateway (PEP + Model Armor Policy)
-    participant Root as Root Agent (Agent Runtime)
+    participant Root as Root Orchestrator (Cloud Run)
+    participant GW as Agent Gateway PEP (Cloud Run)
     participant Hotel as Hotel Agent (Cloud Run)
     participant Rest as Restaurant Agent (Cloud Run)
-    participant MCP as Zomato MCP Server
     participant Verif as Verification Agent (Cloud Run)
     participant Trace as Cloud Trace & Cost Tracker
 
-    User->>GW: POST /v1/trips/plan or /v1/trips/refine
+    User->>Root: POST /v1/trips/plan
+    Root->>Trace: Start Span "orchestrate_trip_planning"
+    Root->>Root: Evaluate Model Escalation (Flash -> Gemini 3.5)
     
     rect rgb(255, 240, 245)
-        Note over GW: Gateway Policy Enforcement Point (PEP)
-        GW->>GW: Enforce Gateway Policy: Model Armor Inspection
-        alt Model Armor Violation (Prompt Injection, Hate Speech, Criminal Fraud)
-            GW-->>User: 403 Forbidden {"policy": "Agent Gateway Model Armor Policy", "violation_type": "..."}
-        else Policy Passed (Clean)
-            GW->>GW: Verify Zero-Trust Auth & Inject W3C Traceparent
-        end
-    end
-
-    GW->>Root: Forward Validated Request
-    Root->>Trace: Start Span "orchestrate_trip_planning" / "refine_itinerary"
-    Root->>Root: Dynamic Model Escalation Check (gemini-3.5-flash -> gemini-3.5)
-    
-    rect rgb(240, 248, 255)
-        Note over Root,Hotel: Step 1: Hotel Hold
-        Root->>Hotel: A2A Request: search_and_hold_hotel
-        Hotel-->>Root: Held Confirmed + task_id: "task-hotel-shinjuku-99"
+        Note over Root,Hotel: Step 1: Hotel Hold via Zero-Trust Gateway PEP
+        Root->>GW: POST /v1/agents/hotel_booking_specialist/messages<br/>(Proxy-Auth: SPIFFE, Auth: aud=hotel-booking-specialist)
+        GW->>GW: 1. Validate Caller Identity (Proxy-Auth)<br/>2. Validate Audience Binding (aud)<br/>3. Inspect Payload via Model Armor
+        GW->>Hotel: Forward Validated Request
+        Hotel-->>GW: Hold Confirmed + task_id: "task-hotel-shinjuku-99"
+        GW-->>Root: Gateway Response
     end
 
     rect rgb(255, 250, 240)
-        Note over Root,Rest: Step 2: Dining Discovery & Skills
-        Root->>Rest: A2A Request: find_dining_options(refTaskIds=["task-hotel-..."])
-        Rest->>MCP: Query Zomato MCP (OAuth & IAM validated)
-        MCP-->>Rest: Raw Restaurant Candidates
-        Rest->>Rest: Execute dietary_advisor (Filter first, Rank second)
-        Rest-->>Root: Ranked Dining Recommendations
+        Note over Root,Rest: Step 2: Dining Discovery via Zero-Trust Gateway PEP
+        Root->>GW: POST /v1/agents/restaurant_booking_specialist/messages<br/>(Proxy-Auth: SPIFFE, Auth: aud=restaurant-booking-specialist)
+        GW->>GW: 1. Validate Caller Identity & Audience<br/>2. Inspect Payload via Model Armor
+        GW->>Rest: Forward Validated Request
+        Rest->>Rest: Execute Zomato MCP + dietary_advisor skill
+        Rest-->>GW: Ranked Dining Recommendations
+        GW-->>Root: Gateway Response
     end
 
     rect rgb(240, 255, 240)
-        Note over Root,Verif: Step 3: HITL Verification
-        Root->>Verif: A2A Streaming: run_verification_task
-        Verif-->>Root: State: "input-required" (Charge $420.00 to card 4242?)
-        Root->>User: Request Authorization
-        User-->>Root: Confirm ("Proceed")
-        Root->>Verif: Resume Task (Confirmed)
-        Verif-->>Root: State: "completed"
+        Note over Root,Verif: Step 3: HITL Verification via Zero-Trust Gateway PEP
+        Root->>GW: POST /v1/agents/final_verification_agent/messages<br/>(Proxy-Auth: SPIFFE, Auth: aud=final-verification-agent)
+        GW->>GW: 1. Validate Caller Identity & Audience<br/>2. Inspect Payload via Model Armor
+        GW->>Verif: Forward Validated Request
+        Verif-->>GW: State: "completed" / "input-required"
+        GW-->>Root: Gateway Response
     end
 
     Root->>Trace: Record Token Usage, Cache Hit Rate, Cost vs $5 Budget
-    Root-->>GW: Consolidated Trip Plan
-    GW-->>User: Final Response
+    Root-->>User: Consolidated Trip Plan
 ```
 
 ### 2.2 Discovery Engine StreamAssist API Integration & Web Portal Architecture

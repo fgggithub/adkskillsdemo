@@ -454,7 +454,7 @@ class StreamAssistService:
             request = discoveryengine.StreamAssistRequest(**request_kwargs)
 
             # Invoke live stream_assist
-            stream = client.stream_assist(request=request)
+            stream = client.stream_assist(request=request, timeout=5.0)
 
             for response in stream:
                 # Convert protobuf to dict

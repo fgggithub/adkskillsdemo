@@ -44,8 +44,14 @@ class RestaurantAgentWrapper:
     with OpenTelemetry instrumentation, token tracking, and circuit breaker resilience.
     """
 
-    def __init__(self, agent: Optional[Agent] = None, cached_content_name: Optional[str] = None):
+    def __init__(
+        self,
+        agent: Optional[Agent] = None,
+        cached_content_name: Optional[str] = None,
+        use_gateway: bool = True,
+    ):
         self.cached_content_name = cached_content_name
+        self.use_gateway = use_gateway
         self.agent = agent or create_restaurant_subagent(cached_content_name=cached_content_name)
 
     def find_dining_options(
@@ -75,6 +81,27 @@ class RestaurantAgentWrapper:
 
             # 1. Execute protected MCP Zomato Search
             mcp_result = execute_zomato_search(claims, query)
+
+            # Delegate through Agent Gateway PEP if enabled
+            if self.use_gateway:
+                try:
+                    from travel_concierge.gateway.client import send_gateway_message
+                    gw_payload = {
+                        "contextId": context_id,
+                        "query": query,
+                        "referenceTaskIds": reference_task_ids or [],
+                        "token_claims": claims,
+                        "parts": [{"text": query}],
+                    }
+                    gw_res = send_gateway_message(
+                        agent_name="restaurant_booking_specialist",
+                        payload=gw_payload,
+                        extra_headers=headers,
+                    )
+                    if "mcp_result" in gw_res:
+                        mcp_result = gw_res["mcp_result"]
+                except Exception as e:
+                    logger.warning(f"Gateway restaurant delegation fallback: {e}")
 
             # 2. Package message for ADK Agent
             message_payload = {

@@ -33,6 +33,9 @@ class ServiceEndpoints:
     agent_gateway_url: str = os.getenv(
         "AGENT_GATEWAY_URL", "https://agent-gateway.internal.bank.example/v1"
     )
+    restaurant_service_url: str = os.getenv(
+        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-service.partner-cloud.com"
+    )
     webhook_callback_url: str = os.getenv(
         "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"
     )

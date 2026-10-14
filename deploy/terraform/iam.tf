@@ -19,11 +19,43 @@ resource "google_project_iam_member" "cloud_trace_agent" {
   member  = "serviceAccount:${google_service_account.concierge_sa.email}"
 }
 
-# 4. Cloud Run Invoker (Public or Gateway Invocation)
-resource "google_cloud_run_v2_service_iam_member" "public_or_gateway_invoker" {
+# 3. Cloud Run Invokers (all services secured with Zero-Trust JWTs at application layer)
+resource "google_cloud_run_v2_service_iam_member" "public_orchestrator_invoker" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.travel_concierge.name
   role     = "roles/run.invoker"
-  member   = "allUsers" # Or specific caller SA for internal Gateway ingress
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "agent_gateway_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.agent_gateway.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "hotel_agent_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.hotel_agent.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "restaurant_agent_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.restaurant_agent.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "verification_agent_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.verification_agent.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

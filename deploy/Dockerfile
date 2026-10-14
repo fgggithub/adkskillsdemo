@@ -42,4 +42,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
-CMD ["uvicorn", "travel_concierge.server:app", "--host", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT ["uvicorn"]
+CMD ["travel_concierge.server:app", "--host", "0.0.0.0", "--port", "8080"]

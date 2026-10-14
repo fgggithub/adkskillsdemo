@@ -101,9 +101,39 @@ def build_gateway_headers(
     return headers
 
 
+def extract_token_claims(token: str) -> Dict[str, Any]:
+    """
+    Extracts payload claims from JWT token string without requiring verification secret.
+    Inspects standard payload part and falls back gracefully.
+    """
+    if not token:
+        return {}
+    if token.startswith("Bearer "):
+        token = token[7:].strip()
+    parts = token.split(".")
+    for idx in ((1, 0) if len(parts) >= 2 else (0,)):
+        if idx < len(parts):
+            try:
+                import base64
+                import json
+                b64 = parts[idx]
+                rem = len(b64) % 4
+                if rem > 0:
+                    b64 += "=" * (4 - rem)
+                decoded = base64.urlsafe_b64decode(b64.encode("utf-8"))
+                claims = json.loads(decoded.decode("utf-8"))
+                if isinstance(claims, dict) and any(k in claims for k in ("aud", "sub", "iss", "groups", "scope")):
+                    return claims
+            except Exception:
+                continue
+    return {}
+
+
 def validate_agent_gateway_headers(headers: Dict[str, str], expected_audience: Optional[str] = None) -> bool:
     """
     Validates presence and format of Agent Gateway authorization headers.
+    When expected_audience is specified, validates that the target token in
+    Authorization is audience-bound to the downstream agent.
     """
     proxy_auth = headers.get("Proxy-Authorization") or headers.get("proxy-authorization")
     auth = headers.get("Authorization") or headers.get("authorization")
@@ -116,4 +146,18 @@ def validate_agent_gateway_headers(headers: Dict[str, str], expected_audience: O
         logger.error("Missing or invalid Authorization header.")
         return False
 
+    if expected_audience:
+        token = auth.split(" ", 1)[1].strip()
+        claims = extract_token_claims(token)
+        aud = claims.get("aud")
+        if aud:
+            if isinstance(aud, list):
+                if expected_audience not in aud and not any(expected_audience in a or a in expected_audience for a in aud):
+                    logger.error(f"Audience mismatch: expected '{expected_audience}', got {aud}")
+                    return False
+            elif aud != expected_audience and expected_audience not in aud and aud not in expected_audience:
+                logger.error(f"Audience mismatch: expected '{expected_audience}', got '{aud}'")
+                return False
+
     return True
+

@@ -78,17 +78,26 @@ gcloud run services update "${SERVICE_NAME}" \
   --project="${PROJECT_ID}" \
   --quiet
 
-# Verification
-SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || terraform -chdir=deploy/terraform output -raw service_url)
-echo "[+] Service deployed at: ${SERVICE_URL}"
+# Verification across all 5 deployed microservices
+GATEWAY_URL=$(gcloud run services describe "agent-gateway-pep" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || terraform -chdir=deploy/terraform output -raw agent_gateway_url 2>/dev/null || echo "")
+SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --project="${PROJECT_ID}" --region="${REGION}" --format='value(status.url)' 2>/dev/null || terraform -chdir=deploy/terraform output -raw service_url 2>/dev/null || echo "")
 
-echo "      Checking /health endpoint..."
+echo "[+] Root Orchestrator deployed at: ${SERVICE_URL}"
+echo "[+] Agent Gateway PEP deployed at: ${GATEWAY_URL}"
+
+# Register Root Agent in GCP Agent Registry
+echo "[+] Registering Root Agent in GCP Agent Registry..."
+python3 scripts/register_agents.py --service-url="${SERVICE_URL}" --region="${REGION}" --project-id="${PROJECT_ID}"
+
+echo "      Checking Root Orchestrator /health..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVICE_URL}/health" || echo "failed")
-echo "      Health Check (/health) Response: ${HTTP_STATUS}"
+echo "      Root Health Check: ${HTTP_STATUS}"
 
-echo "      Checking A2A Agent Card endpoint..."
-CARD_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVICE_URL}/.well-known/agent-card.json" || echo "failed")
-echo "      Agent Card (/.well-known/agent-card.json) Response: ${CARD_STATUS}"
+if [[ -n "${GATEWAY_URL}" ]]; then
+  echo "      Checking Agent Gateway /health..."
+  GW_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${GATEWAY_URL}/health" || echo "failed")
+  echo "      Gateway Health Check: ${GW_STATUS}"
+fi
 
 END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
