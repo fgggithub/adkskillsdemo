@@ -72,19 +72,22 @@ def get_zomato_mcp_toolset(url: Optional[str] = None) -> Any:
     Factory creating a configured McpToolset instance with GCP Identity Token authentication.
     """
     if McpToolset is None or StreamableHTTPConnectionParams is None:
-        raise ImportError(
-            "mcp package is required for McpToolset. Install with: pip install -r requirements.txt"
-        )
+        logger.warning("mcp package is not available for McpToolset, falling back to execute_zomato_search")
+        return execute_zomato_search
     endpoint_url = url or settings.endpoints.zomato_mcp_url
-    return McpToolset(
-        connection_params=StreamableHTTPConnectionParams(
-            url=endpoint_url,
-            headers={"Authorization": f"Bearer mock-gcp-token-for-{endpoint_url}"},
-        ),
-        tool_filter=[
-            "search_restaurants",
-            "get_restaurant_details",
-            "get_restaurant_reviews",
-            "search_by_cuisine",
-        ],
-    )
+    try:
+        return McpToolset(
+            connection_params=StreamableHTTPConnectionParams(
+                url=endpoint_url,
+                headers={"Authorization": f"Bearer mock-gcp-token-for-{endpoint_url}"},
+            ),
+            tool_filter=[
+                "search_restaurants",
+                "get_restaurant_details",
+                "get_restaurant_reviews",
+                "search_by_cuisine",
+            ],
+        )
+    except Exception as e:
+        logger.warning("Failed to initialize McpToolset (%s), falling back to execute_zomato_search", e)
+        return execute_zomato_search

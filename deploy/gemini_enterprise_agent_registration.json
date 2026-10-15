@@ -1,0 +1,28 @@
+{
+  "$schema": "https://cloud.google.com/gemini-enterprise/schemas/agent-registration-v1.json",
+  "gemini_enterprise_adk_agent": {
+    "project_id": "qwiklabs-gcp-04-f5ed5822b013",
+    "app_id": "fdedemoapp",
+    "location": "global",
+    "documentation": "https://docs.cloud.google.com/gemini/enterprise/docs/register-and-manage-an-adk-agent",
+    "agent": {
+      "name": "projects/301388663977/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/17762425149726716071",
+      "displayName": "Travel Concierge",
+      "description": "Travel Concierge Agent for flight, hotel, and restaurant booking",
+      "createTime": "2026-10-15T14:29:00.303515Z",
+      "updateTime": "2026-10-15T14:29:43.015714640Z",
+      "adkAgentDefinition": {
+        "toolSettings": {},
+        "provisionedReasoningEngine": {
+          "reasoningEngine": "projects/qwiklabs-gcp-04-f5ed5822b013/locations/us-central1/reasoningEngines/123456"
+        }
+      },
+      "state": "ENABLED",
+      "sharingConfig": {
+        "scope": "ALL_USERS"
+      },
+      "agentIdentityInfo": {}
+    },
+    "console_url": "https://console.cloud.google.com/gemini-enterprise/locations/global/engines/fdedemoapp/agentic/agents?project=qwiklabs-gcp-04-f5ed5822b013"
+  }
+}

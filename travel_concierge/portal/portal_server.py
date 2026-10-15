@@ -42,7 +42,7 @@ def get_portal_config():
     return {
         "project_id": settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73",
         "region": settings.REGION or "us-central1",
-        "default_engine_id": os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "travel-concierge-enterprise-app"),
+        "default_engine_id": os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp"),
         "active_model": settings.DEFAULT_MODEL,
         "escalation_model": "gemini-3.5",
         "budget": budget,
@@ -83,7 +83,7 @@ async def stream_assist_endpoint(req: StreamAssistPortalRequest):
     backend = req.backend or "concierge"
     project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73"
     location = settings.REGION or "us-central1"
-    engine_id = req.engine_id or os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "travel-concierge-enterprise-app")
+    engine_id = req.engine_id or os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp")
 
     def event_generator():
         try:

@@ -22,6 +22,11 @@ resource "google_project_service" "enabled_apis" {
     "artifactregistry.googleapis.com",
     "secretmanager.googleapis.com",
     "iam.googleapis.com",
+    "iap.googleapis.com",
+    "agentidentity.googleapis.com",
+    "agentidentitycredentials.googleapis.com",
+    "discoveryengine.googleapis.com",
+    "dialogflow.googleapis.com",
   ])
 
   service            = each.key

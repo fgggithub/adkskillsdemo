@@ -180,12 +180,19 @@ def test_portal_sessions_management(client):
 
 def test_discovery_engine_api_fallback(client):
     """Verifies that discovery_engine mode handles non-existent remote engines gracefully."""
-    req_payload = {
-        "query": "Recommend ramen in Shibuya",
-        "backend": "discovery_engine",
-        "engine_id": "non-existent-engine-99999",
-    }
-    response = client.post("/portal/api/stream", json=req_payload)
-    assert response.status_code == 200
-    assert "Discovery Engine StreamAssist API Notice" in response.text
-    assert "SUCCEEDED" in response.text
+    from unittest.mock import patch, MagicMock
+
+    mock_client = MagicMock()
+    mock_client.stream_assist.side_effect = Exception("Engine 'non-existent-engine-99999' not found or API unreachable")
+
+    with patch("google.cloud.discoveryengine_v1.AssistantServiceClient", return_value=mock_client):
+        req_payload = {
+            "query": "Recommend ramen in Shibuya",
+            "backend": "discovery_engine",
+            "engine_id": "non-existent-engine-99999",
+        }
+        response = client.post("/portal/api/stream", json=req_payload)
+        assert response.status_code == 200
+        assert "Discovery Engine StreamAssist API Notice" in response.text
+        assert "SUCCEEDED" in response.text
+

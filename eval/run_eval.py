@@ -5,7 +5,10 @@ Runs benchmark test cases and generates evaluation scorecards.
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Dict, Any, List
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from eval.eval_config import EVAL_DATASET, EvalTestCase
 from eval.evaluators import EvaluationSuite, MetricScore

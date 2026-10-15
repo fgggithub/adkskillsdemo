@@ -3,7 +3,7 @@ Configuration settings and environment management for the Travel Concierge Multi
 """
 import os
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -48,7 +48,7 @@ class GenerationGuardrailsConfig:
     stop_sequences: List[str] = field(
         default_factory=lambda: ["END_OF_CONCIERGE_RESPONSE", "### END"]
     )
-    response_mime_type: str = os.getenv("RESPONSE_MIME_TYPE", "application/json")
+    response_mime_type: Optional[str] = os.getenv("RESPONSE_MIME_TYPE")
     thinking_budget: int = int(os.getenv("THINKING_BUDGET", "2048"))
     thinking_level: str = os.getenv("THINKING_LEVEL", "LOW")  # "LOW" or "HIGH"
 
@@ -58,7 +58,7 @@ class Settings:
     """Global application settings."""
     project_id: str = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("PROJECT_ID", "my-gcp-project")
     location: str = os.getenv("GOOGLE_CLOUD_LOCATION") or os.getenv("LOCATION", "us-central1")
-    model_name: str = os.getenv("MODEL_NAME", "gemini-3.5-flash")
+    model_name: str = os.getenv("MODEL_NAME", "gemini-2.5-flash")
     base_model_name: str = os.getenv("BASE_MODEL_NAME", "gemini-3.5-flash")
     escalated_model_name: str = os.getenv("ESCALATED_MODEL_NAME", "gemini-3.5")
     environment: str = os.getenv("ENVIRONMENT", "development")

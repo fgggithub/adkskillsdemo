@@ -45,6 +45,8 @@ echo "[+] Deregistering Agent and Skill Registry resources..."
 gcloud alpha agent-registry services delete "travel-concierge-orchestrator" --location=global --project="${PROJECT_ID}" --quiet 2>/dev/null || true
 gcloud alpha agent-registry services delete "travel-concierge-orchestrator" --location="${REGION}" --project="${PROJECT_ID}" --quiet 2>/dev/null || true
 gcloud alpha agent-registry skills delete "private-dietary-advisor" --location=global --project="${PROJECT_ID}" --quiet 2>/dev/null || true
+gcloud alpha agent-identity auth-providers delete "travel-concierge-auth" --location="${REGION}" --project="${PROJECT_ID}" --quiet 2>/dev/null || true
+python3 scripts/create_gemini_enterprise_app.py --teardown --project-id="${PROJECT_ID}" --region="${REGION}" --app-id="fdedemoapp" 2>/dev/null || true
 
 echo "[3/3] Running residual cost audit to verify 100% clean teardown..."
 python3 scripts/cost_report.py --verify-teardown

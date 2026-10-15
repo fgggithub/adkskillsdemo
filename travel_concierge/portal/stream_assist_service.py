@@ -44,7 +44,7 @@ class StreamAssistService:
         start_time = time.time()
         project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73"
         location = settings.REGION or "us-central1"
-        engine_id = os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "travel-concierge-enterprise-app")
+        engine_id = os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp")
 
         # Normalize or create session
         if not session_id:

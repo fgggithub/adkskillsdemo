@@ -179,6 +179,79 @@ The portal streaming endpoint (`/portal/api/stream`) generates real-time events 
 - **`citations`**: Structured metadata cards linking recommended venues, hygiene ratings, and booking confirmations.
 - **`safetyRatings`**: Real-time Model Armor scanning verdicts embedded directly into the response payload.
 
+### 2.3 Google Auth Platform, OAuth 2.0 Clients & Gemini Enterprise Agent Identity Architecture
+
+Deploying autonomous agents to **Gemini Enterprise** requires integrating with the **Google Auth Platform** to facilitate secure user-delegated authority (3-Legged OAuth / 3LO) and credential management via the **Agent Identity Auth Manager**.
+
+Official Specifications:
+- [Google Cloud Authentication Guidelines](https://docs.cloud.google.com/docs/authentication)
+- [Manage OAuth Clients - Google Auth Platform](https://support.google.com/cloud/answer/15549257)
+- [Gemini Enterprise Agent Platform - Agent Identity Governance](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/agent-identity)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User / Gemini Enterprise
+    participant AuthPlatform as Google Auth Platform (OAuth Consent & Client)
+    participant AgentIdentity as Agent Identity Auth Provider (3LO + PKCE)
+    participant SecretMgr as Google Secret Manager (travel-concierge-api-credentials)
+    participant Gateway as Agent Gateway PEP (Cloud Run)
+    participant Agent as Travel Concierge Orchestrator
+
+    Note over AuthPlatform,AgentIdentity: Deployment Phase (scripts/setup_auth_platform.sh)
+    AuthPlatform->>AuthPlatform: Provision Brand & Web OAuth Client ID/Secret
+    AuthPlatform->>AgentIdentity: Register AuthProvider (redirect: /oauth-redirect, PKCE=true)
+    AuthPlatform->>SecretMgr: Commit Client ID & Secret Version
+    
+    Note over User,Agent: Runtime Execution Phase
+    User->>AgentIdentity: 1. Initiate 3LO Consent Flow (/authorize)
+    AgentIdentity->>AuthPlatform: Exchange Authorization Code for Refresh/Access Token
+    AgentIdentity-->>User: Issue User-Delegated Token
+    User->>Gateway: 2. Invoke Agent with Bearer Token + Service Token
+    Gateway->>Gateway: 3. Verify Model Armor & Audience Token Claims
+    Gateway->>Agent: 4. Dispatch Authenticated Request
+    Agent-->>User: 5. Return Protected Travel Recommendation Response
+```
+
+#### Key Architecture Components:
+1. **OAuth Brand (Consent Screen)**:
+   - Configures application branding, privacy policies, developer contacts, and user audience boundaries (Internal/External).
+2. **OAuth 2.0 Web Client (`gemini-enterprise-agent-client`)**:
+   - Provisions standard client ID and client secret.
+   - Authorizes standard Gemini Enterprise redirect URIs:
+     - `https://vertexaisearch.cloud.google.com/oauth-redirect`
+     - `https://vertexaisearch.cloud.google.com/static/oauth/oauth.html`
+     - `https://agentidentitycredentials.googleapis.com/v1/projects/{project}/locations/{region}/authProviders/{provider}/oauthcallback`
+3. **Agent Identity Auth Provider (`travel-concierge-auth`)**:
+   - Manages token lifecycles, automated refreshes, and Proof Key for Code Exchange (PKCE) verification directly inside Google Cloud Agent Runtime.
+4. **Secret Manager Encryption**:
+   - OAuth client secrets and credentials are stored in `travel-concierge-api-credentials` and injected into the Cloud Run services at runtime with strict least-privilege IAM access (`roles/secretmanager.secretAccessor`).
+
+### 2.4 Gemini Enterprise App (`fdedemoapp`) & Discovery Engine Agent Registration
+
+To serve enterprise search, conversational reasoning, and corporate travel assistance, the Travel Concierge is registered into Google Cloud Discovery Engine as the **Gemini Enterprise App `fdedemoapp`**:
+
+```mermaid
+graph TD
+    User["Corporate User / Gemini Enterprise"] --> Engine["Gemini Enterprise App: fdedemoapp<br/>(projects/.../collections/default_collection/engines/fdedemoapp)"]
+    Engine --> Assistant["Default Assistant<br/>(engines/fdedemoapp/assistants/default_assistant)"]
+    Assistant --> Binding["Agent Identity Binding<br/>(fdedemoapp-travel-concierge-binding)"]
+    Binding --> AuthProvider["Agent Identity Auth Provider<br/>(travel-concierge-auth)"]
+    Binding --> Registry["GCP Agent Registry<br/>(travel-concierge-orchestrator)"]
+    Registry --> StreamAssist["Discovery Engine StreamAssist API<br/>(/portal/api/stream)"]
+    StreamAssist --> Root["Root Travel Concierge Orchestrator<br/>(Cloud Run)"]
+    Root --> Gateway["Agent Gateway PEP<br/>(Model Armor + Zero Trust)"]
+    Gateway --> Subagents["Subagents (Hotel, Restaurant, Verification)"]
+```
+
+#### Provisioning Hierarchy & Resource Identifiers:
+- **Engine Path**: `projects/{project_id}/locations/global/collections/default_collection/engines/fdedemoapp`
+- **Solution Type**: `SOLUTION_TYPE_CHAT` (Generic Industry Vertical, conversational agent creation config).
+- **Assistant Path**: `.../engines/fdedemoapp/assistants/default_assistant`
+- **Agent Registry Service**: `travel-concierge-orchestrator` (registered in both `global` and regional `us-central1` registries).
+- **Agent Binding**: `fdedemoapp-travel-concierge-binding` mapping URN `urn:agent:travel-concierge:default:travel-concierge-orchestrator` to Auth Provider `travel-concierge-auth`.
+- **Streaming Ingress**: Server-Sent Events (SSE) `/portal/api/stream` translating multi-turn queries, tool reasoning, context caching metrics, and safety ratings into Discovery Engine StreamAssist protobuf events.
+
 ---
 
 ## 3. Zero-Trust Security & Policy Enforcement

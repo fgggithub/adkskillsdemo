@@ -1,0 +1,56 @@
+{
+  "$schema": "https://cloud.google.com/gemini-enterprise/schemas/auth-platform-v1.json",
+  "google_auth_platform": {
+    "project_id": "qwiklabs-gcp-04-f5ed5822b013",
+    "region": "us-central1",
+    "documentation": [
+      "https://docs.cloud.google.com/docs/authentication",
+      "https://support.google.com/cloud/answer/15549257"
+    ],
+    "brand": {
+      "name": "projects/301388663977/brands/301388663977",
+      "application_title": "fdeapp",
+      "support_email": "student-01-508858ca291d@qwiklabs.net",
+      "org_internal_only": true
+    },
+    "oauth_client": {
+      "client_id": "301388663977-ju9kuo1bocobtmajpb65u6frggq63lkf.apps.googleusercontent.com",
+      "display_name": "gemini-enterprise-agent-client",
+      "application_type": "WEB_APPLICATION",
+      "authorized_redirect_uris": [
+        "https://vertexaisearch.cloud.google.com/oauth-redirect",
+        "https://vertexaisearch.cloud.google.com/static/oauth/oauth.html",
+        "https://agentidentitycredentials.googleapis.com/v1/projects/qwiklabs-gcp-04-f5ed5822b013/locations/us-central1/authProviders/travel-concierge-auth/oauthcallback"
+      ],
+      "authorized_javascript_origins": [
+        "https://vertexaisearch.cloud.google.com",
+        "https://console.cloud.google.com"
+      ],
+      "secret_manager_reference": "travel-concierge-api-credentials"
+    },
+    "data_access_scopes": [
+      "openid",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/cloud-platform",
+      "restaurants.read"
+    ]
+  },
+  "gemini_enterprise_deployment": {
+    "target_agent": "travel-concierge-orchestrator",
+    "runtime": "google-agent-runtime",
+    "auth_manager": {
+      "enabled": true,
+      "flow_type": "THREE_LEGGED_OAUTH_WITH_PKCE",
+      "auth_provider_resource": "projects/qwiklabs-gcp-04-f5ed5822b013/locations/us-central1/authProviders/travel-concierge-auth",
+      "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "default_continue_uri": "https://vertexaisearch.cloud.google.com/oauth-redirect",
+      "pkce_enabled": true
+    },
+    "service_endpoints": {
+      "service_url": "",
+      "stream_assist_portal_url": ""
+    }
+  }
+}

@@ -34,15 +34,21 @@ def get_generation_config(
     cached_content: Optional[str] = None,
 ) -> types.GenerateContentConfig:
     """Creates a standardized GenerateContentConfig applying enterprise guardrails."""
+    t_budget = thinking_budget if thinking_budget is not None else settings.guardrails.thinking_budget
+    if t_budget is not None and t_budget > 0:
+        thinking_cfg = types.ThinkingConfig(thinking_budget=t_budget)
+    elif thinking_level or settings.guardrails.thinking_level:
+        thinking_cfg = types.ThinkingConfig(thinking_level=thinking_level or settings.guardrails.thinking_level)
+    else:
+        thinking_cfg = None
+
     kwargs = {
         "max_output_tokens": max_output_tokens or settings.guardrails.max_output_tokens,
         "stop_sequences": stop_sequences or settings.guardrails.stop_sequences,
         "response_mime_type": response_mime_type or settings.guardrails.response_mime_type,
-        "thinking_config": types.ThinkingConfig(
-            thinking_budget=thinking_budget or settings.guardrails.thinking_budget,
-            thinking_level=thinking_level or settings.guardrails.thinking_level,
-        ),
     }
+    if thinking_cfg:
+        kwargs["thinking_config"] = thinking_cfg
     if cached_content:
         kwargs["cached_content"] = cached_content
 

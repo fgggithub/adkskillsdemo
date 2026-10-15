@@ -24,9 +24,18 @@ def create_restaurant_subagent(
 ) -> Agent:
     """Factory creating the production Restaurant Booking Specialist Agent."""
     if tools is None:
+        tools = []
         zomato_toolset = get_zomato_mcp_toolset()
+        if isinstance(zomato_toolset, list):
+            tools.extend(zomato_toolset)
+        elif zomato_toolset is not None:
+            tools.append(zomato_toolset)
+
         skill_toolset = get_skill_registry_toolset()
-        tools = [zomato_toolset, skill_toolset]
+        if isinstance(skill_toolset, list):
+            tools.extend(skill_toolset)
+        elif skill_toolset is not None:
+            tools.append(skill_toolset)
 
     return Agent(
         name="restaurant_booking_specialist",

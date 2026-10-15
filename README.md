@@ -15,9 +15,10 @@ For full architecture diagrams, sequence flows, and itemized GCP cost breakdowns
 6. [Evaluation Testing Instructions](#evaluation-testing-instructions)
 7. [GCP API Enablement](#gcp-api-enablement)
 8. [Cloud Deployment & Estimated Times](#cloud-deployment--estimated-times)
-9. [Testing the Deployed Application (Laptop & Console)](#testing-the-deployed-application-laptop--console)
-10. [Teardown & Zero Residual Cost Verification](#teardown--zero-residual-cost-verification)
-11. [Cost Tracking & Budget Auditing](#cost-tracking--budget-auditing)
+9. [Google Auth Platform & OAuth Clients (Gemini Enterprise)](#google-auth-platform--oauth-clients-gemini-enterprise)
+10. [Testing the Deployed Application (Laptop & Console)](#testing-the-deployed-application-laptop--console)
+11. [Teardown & Zero Residual Cost Verification](#teardown--zero-residual-cost-verification)
+12. [Cost Tracking & Budget Auditing](#cost-tracking--budget-auditing)
 
 ---
 
@@ -116,7 +117,7 @@ pip install -r requirements.txt
 ```
 
 ### 1. Run Complete Pytest Suite
-Runs all 62 unit, security, telemetry, circuit breaker, and integration tests:
+Runs all 83 unit, security, telemetry, circuit breaker, auth platform, and Gemini Enterprise app tests:
 ```bash
 pytest -v
 ```
@@ -182,7 +183,7 @@ This script enables:
 
 ## Cloud Deployment & Estimated Times
 
-The automated deployment script handles end-to-end infrastructure setup, skills registration, container building, and Cloud Run deployment.
+The automated deployment script handles end-to-end infrastructure setup, skills registration, container building, Cloud Run deployment, Google Auth Platform configuration, and Gemini Enterprise agent registration.
 
 ```bash
 bash scripts/deploy.sh
@@ -196,8 +197,92 @@ bash scripts/deploy.sh
 | **Phase 3** | Terraform Core Provisioning (Artifact Registry, IAM, Secrets) | ~15 – 20 seconds |
 | **Phase 4** | Container Build & Push to Artifact Registry | ~45 – 60 seconds |
 | **Phase 5** | Cloud Run Service Deployment (`google_cloud_run_v2_service`) | ~30 – 40 seconds |
-| **Phase 6** | Service Health Check & Budget Audit | ~5 – 10 seconds |
-| **Total** | **Full End-to-End Automated Deployment** | **~2m 00s – 2m 35s** |
+| **Phase 6** | Google Auth Platform & OAuth Clients Setup (`scripts/setup_auth_platform.sh`) | ~10 – 15 seconds |
+| **Phase 7** | Agent Registry Registration, Health Checks & Budget Audit | ~5 – 10 seconds |
+| **Total** | **Full End-to-End Automated Deployment** | **~2m 10s – 2m 50s** |
+
+---
+
+## Google Auth Platform & OAuth Clients (Gemini Enterprise)
+
+Deploying autonomous agents to **Gemini Enterprise** and the **Google Cloud Agent Platform** requires establishing OAuth 2.0 trust credentials to support user-delegated authority (3-Legged OAuth / 3LO) and secure Agent-to-Agent (A2A) token exchanges.
+
+Official Documentation:
+- [Google Cloud Authentication Overview](https://docs.cloud.google.com/docs/authentication)
+- [Manage OAuth Clients - Google Auth Platform](https://support.google.com/cloud/answer/15549257)
+- [Gemini Enterprise Agent Platform - Agent Identity](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/agent-identity)
+
+### Automated Setup Script
+
+The solution includes an automated provisioning script:
+- `scripts/setup_auth_platform.sh` (Shell entrypoint)
+- `scripts/setup_auth_platform.py` (Underlying Python engine)
+
+```bash
+# Run standalone with automatic project discovery:
+bash scripts/setup_auth_platform.sh
+
+# Or with custom service URL and overrides:
+bash scripts/setup_auth_platform.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --service-url="${SERVICE_URL}"
+```
+
+### Key Configurations Created:
+1. **Google Auth Platform Brand (Consent Screen)**:
+   - Configures internal/external branding with application title (`Travel Concierge Gemini Enterprise Agent`) and support email.
+2. **OAuth 2.0 Web Client (`gemini-enterprise-agent-client`)**:
+   - Generates the OAuth Client ID and Secret (`GOCSPX-...`).
+   - Configures authorized redirect URIs required by Gemini Enterprise:
+     - `https://vertexaisearch.cloud.google.com/oauth-redirect`
+     - `https://vertexaisearch.cloud.google.com/static/oauth/oauth.html`
+     - `https://agentidentitycredentials.googleapis.com/v1/projects/{project}/locations/{region}/authProviders/{provider}/oauthcallback`
+     - `${SERVICE_URL}/oauth2callback` and `${SERVICE_URL}/portal`
+   - Configures authorized JavaScript origins:
+     - `https://vertexaisearch.cloud.google.com`
+     - `https://console.cloud.google.com`
+     - `${SERVICE_URL}`
+3. **Gemini Enterprise Agent Identity Auth Provider**:
+   - Registers `travel-concierge-auth` in Google Cloud Agent Identity (`gcloud alpha agent-identity auth-providers`) with Three-Legged OAuth (3LO) and Proof Key for Code Exchange (PKCE) enabled.
+4. **Google Secret Manager Storage**:
+   - Safely commits the Client ID, Client Secret, and redirect URLs to Secret Manager secret `travel-concierge-api-credentials`.
+5. **Configuration Artifacts**:
+   - `deploy/auth_platform_config.json`: Canonical JSON descriptor for the Gemini Enterprise Agent Runtime.
+   - `deploy/agent_gateway/auth_platform_config.yaml`: YAML policy configuration for the Managed Agent Gateway PEP.
+
+---
+
+## Gemini Enterprise App 'fdedemoapp' Creation & Agent Registration
+
+To deploy and register the agent with Gemini Enterprise (Vertex AI Search & Conversation / Discovery Engine), run the dedicated provisioning script [`scripts/create_gemini_enterprise_app.sh`](file:///home/student_01_508858ca291d/adkskillsdemo/scripts/create_gemini_enterprise_app.sh) or its underlying Python implementation [`scripts/create_gemini_enterprise_app.py`](file:///home/student_01_508858ca291d/adkskillsdemo/scripts/create_gemini_enterprise_app.py):
+
+```bash
+# Provision Gemini Enterprise App 'fdedemoapp' and register root agent
+bash scripts/create_gemini_enterprise_app.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --service-url="${SERVICE_URL}" \
+  --app-id="fdedemoapp"
+```
+
+### What this script creates and provisions:
+1. **Gemini Enterprise / Discovery Engine App (`fdedemoapp`)**:
+   - Resource Path: `projects/{project}/locations/global/collections/default_collection/engines/fdedemoapp`
+   - Solution Type: `SOLUTION_TYPE_CHAT` (conversational engine) with generic industry vertical.
+   - Agent Creation Config: Business name `"Travel Concierge"`, timezone `"America/Los_Angeles"`, and language `"en"`.
+   - Default Assistant Path: `.../engines/fdedemoapp/assistants/default_assistant`.
+2. **GCP Agent Registry Registration**:
+   - Registers root service `travel-concierge-orchestrator` in both `global` and regional (`us-central1`) Agent Registry (`gcloud alpha agent-registry services create`).
+   - Links the A2A Agent Card specification (`/.well-known/agent-card.json`) and Discovery Engine StreamAssist endpoint (`/portal/api/stream`).
+3. **Agent Identity Binding (`fdedemoapp-travel-concierge-binding`)**:
+   - Associates the Gemini Enterprise app runtime with the Agent Identity 3LO Auth Provider (`travel-concierge-auth`).
+   - Sets target URN `urn:agent:travel-concierge:default:travel-concierge-orchestrator` and callback redirect URI.
+4. **Configuration Artifacts**:
+   - `deploy/gemini_enterprise_app_config.json`: Canonical JSON metadata descriptor for Gemini Enterprise.
+   - `deploy/agent_gateway/gemini_enterprise_app_config.yaml`: YAML configuration for the Managed Agent Gateway PEP.
+5. **Teardown**:
+   - Run `python3 scripts/create_gemini_enterprise_app.py --teardown --project-id="${PROJECT_ID}" --app-id="fdedemoapp"` to cleanly delete the engine and agent bindings.
 
 ---
 
