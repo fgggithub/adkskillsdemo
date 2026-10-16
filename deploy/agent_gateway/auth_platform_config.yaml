@@ -1,23 +1,23 @@
 $schema: https://cloud.google.com/gemini-enterprise/schemas/auth-platform-v1.json
 google_auth_platform:
-  project_id: qwiklabs-gcp-04-6d35b13fa41b
+  project_id: qwiklabs-gcp-04-909cea90d3b4
   region: us-central1
   documentation:
   - https://docs.cloud.google.com/docs/authentication
   - https://support.google.com/cloud/answer/15549257
   brand:
-    name: projects/1085688005479/brands/1085688005479
+    name: projects/768571967795/brands/768571967795
     application_title: Travel Concierge Gemini Enterprise Agent
-    support_email: student-01-f3d019116b6f@qwiklabs.net
+    support_email: student-01-ca9e39258fde@qwiklabs.net
     org_internal_only: true
   oauth_client:
-    client_id: 1085688005479-4oja32hso3pdlloqgmn97n9df8ol4cl8.apps.googleusercontent.com
+    client_id: 768571967795-e7suka63j2o02mjmdout5n8fp5tlh98k.apps.googleusercontent.com
     display_name: gemini-enterprise-agent-client
     application_type: WEB_APPLICATION
     authorized_redirect_uris:
     - https://vertexaisearch.cloud.google.com/oauth-redirect
     - https://vertexaisearch.cloud.google.com/static/oauth/oauth.html
-    - https://agentidentitycredentials.googleapis.com/v1/projects/qwiklabs-gcp-04-6d35b13fa41b/locations/us-central1/authProviders/travel-concierge-auth/oauthcallback
+    - https://agentidentitycredentials.googleapis.com/v1/projects/qwiklabs-gcp-04-909cea90d3b4/locations/us-central1/authProviders/travel-concierge-auth/oauthcallback
     authorized_javascript_origins:
     - https://vertexaisearch.cloud.google.com
     - https://console.cloud.google.com
@@ -34,7 +34,7 @@ gemini_enterprise_deployment:
   auth_manager:
     enabled: true
     flow_type: THREE_LEGGED_OAUTH_WITH_PKCE
-    auth_provider_resource: projects/qwiklabs-gcp-04-6d35b13fa41b/locations/us-central1/authProviders/travel-concierge-auth
+    auth_provider_resource: projects/qwiklabs-gcp-04-909cea90d3b4/locations/us-central1/authProviders/travel-concierge-auth
     authorization_url: https://accounts.google.com/o/oauth2/v2/auth
     token_url: https://oauth2.googleapis.com/token
     default_continue_uri: https://vertexaisearch.cloud.google.com/oauth-redirect

@@ -16,6 +16,8 @@ from scripts.register_adk_agent import (
     register_or_update_adk_agent,
     delete_adk_agent,
     export_agent_registration_artifacts,
+    list_vertex_reasoning_engines,
+    resolve_or_provision_reasoning_engine,
 )
 
 
@@ -74,14 +76,21 @@ def test_list_gemini_enterprise_agents(mock_run_cmd):
     assert agents[0]["state"] == "ENABLED"
 
 
+@patch("scripts.register_adk_agent.resolve_or_provision_reasoning_engine")
 @patch("scripts.register_adk_agent.list_gemini_enterprise_agents")
 @patch("scripts.register_adk_agent.run_cmd")
-def test_register_or_update_adk_agent_existing(mock_run_cmd, mock_list):
+def test_register_or_update_adk_agent_existing(mock_run_cmd, mock_list, mock_resolve):
+    mock_resolve.return_value = "projects/test-proj/locations/us-central1/reasoningEngines/974471042296709120"
     existing_agent = {
         "name": "projects/123/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/agent-1",
         "displayName": "Travel Concierge",
         "sharingConfig": {"scope": "ALL_USERS"},
         "state": "ENABLED",
+        "adkAgentDefinition": {
+            "provisionedReasoningEngine": {
+                "reasoningEngine": "projects/test-proj/locations/us-central1/reasoningEngines/974471042296709120"
+            }
+        }
     }
     mock_list.return_value = [existing_agent]
 
@@ -97,9 +106,11 @@ def test_register_or_update_adk_agent_existing(mock_run_cmd, mock_list):
     assert res["name"] == existing_agent["name"]
 
 
+@patch("scripts.register_adk_agent.resolve_or_provision_reasoning_engine")
 @patch("scripts.register_adk_agent.list_gemini_enterprise_agents")
 @patch("scripts.register_adk_agent.run_cmd")
-def test_register_or_update_adk_agent_new(mock_run_cmd, mock_list):
+def test_register_or_update_adk_agent_new(mock_run_cmd, mock_list, mock_resolve):
+    mock_resolve.return_value = "projects/test-proj/locations/us-central1/reasoningEngines/974471042296709120"
     mock_list.return_value = []
     mock_run_cmd.return_value = MagicMock(
         returncode=0,
@@ -158,3 +169,65 @@ def test_export_agent_registration_artifacts(tmp_path):
         data = json.load(f)
     assert data["gemini_enterprise_adk_agent"]["project_id"] == "test-proj"
     assert data["gemini_enterprise_adk_agent"]["agent"]["displayName"] == "Travel Concierge"
+
+
+@patch("scripts.register_adk_agent.list_vertex_reasoning_engines")
+def test_resolve_or_provision_reasoning_engine_existing(mock_list_engines):
+    mock_list_engines.return_value = [
+        {"name": "projects/test-proj/locations/us-central1/reasoningEngines/existing-123", "displayName": "Travel Concierge Root Agent"}
+    ]
+    re_name = resolve_or_provision_reasoning_engine(
+        project_id="test-proj",
+        region="us-central1",
+        display_name="Travel Concierge Root Agent",
+        access_token="mock-token",
+    )
+    assert re_name == "projects/test-proj/locations/us-central1/reasoningEngines/existing-123"
+
+
+@patch("scripts.register_adk_agent.run_cmd")
+@patch("scripts.register_adk_agent.list_vertex_reasoning_engines")
+def test_resolve_or_provision_reasoning_engine_provisions_new(mock_list_engines, mock_run_cmd):
+    mock_list_engines.return_value = []
+    # Mock REST API call or SDK
+    mock_run_cmd.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps({
+            "name": "operations/op-123",
+            "response": {"name": "projects/test-proj/locations/us-central1/reasoningEngines/newly-created-456"}
+        })
+    )
+
+    with patch("vertexai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_ae = MagicMock()
+        mock_ae.api_resource.name = "projects/test-proj/locations/us-central1/reasoningEngines/sdk-created-789"
+        mock_client.agent_engines.create.return_value = mock_ae
+        mock_client_cls.return_value = mock_client
+
+        re_name = resolve_or_provision_reasoning_engine(
+            project_id="test-proj",
+            region="us-central1",
+            display_name="Travel Concierge Root Agent",
+            access_token="mock-token",
+        )
+        assert re_name == "projects/test-proj/locations/us-central1/reasoningEngines/sdk-created-789"
+        assert "123456" not in re_name
+
+
+@patch("scripts.register_adk_agent.run_cmd")
+@patch("scripts.register_adk_agent.list_vertex_reasoning_engines")
+def test_resolve_or_provision_reasoning_engine_raises_error_no_fallback(mock_list_engines, mock_run_cmd):
+    mock_list_engines.return_value = []
+    mock_run_cmd.return_value = MagicMock(returncode=1, stdout="", stderr="API Error")
+
+    with patch("vertexai.Client", side_effect=Exception("API disabled")):
+        with pytest.raises(RuntimeError) as exc_info:
+            resolve_or_provision_reasoning_engine(
+                project_id="test-proj",
+                region="us-central1",
+                display_name="Travel Concierge Root Agent",
+                access_token="mock-token",
+            )
+        assert "Unable to discover or provision a valid Vertex AI Reasoning Engine" in str(exc_info.value)
+        assert "123456" not in str(exc_info.value)

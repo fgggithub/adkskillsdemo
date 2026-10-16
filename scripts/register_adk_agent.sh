@@ -16,6 +16,7 @@ APP_ID="fdedemoapp"
 LOCATION="global"
 DISPLAY_NAME="Travel Concierge"
 DESCRIPTION="Travel Concierge Agent for flight, hotel, and restaurant booking"
+REGION="${REGION:-us-central1}"
 REASONING_ENGINE=""
 LIST_ONLY=false
 
@@ -23,6 +24,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --project-id=*)
       PROJECT_ID="${1#*=}"
+      shift
+      ;;
+    --region=*)
+      REGION="${1#*=}"
       shift
       ;;
     --app-id=*)
@@ -66,6 +71,7 @@ echo "==========================================================================
 echo "    REGISTERING ADK AGENT IN GEMINI ENTERPRISE (FDEDEMOAPP)               "
 echo "=========================================================================="
 echo " Project ID:     ${PROJECT_ID}"
+echo " Region:         ${REGION}"
 echo " App ID:         ${APP_ID}"
 echo " Location:       ${LOCATION}"
 echo " Agent Name:     ${DISPLAY_NAME}"
@@ -73,6 +79,7 @@ echo "==========================================================================
 
 ARGS=(
   "--project-id=${PROJECT_ID}"
+  "--region=${REGION}"
   "--app-id=${APP_ID}"
   "--location=${LOCATION}"
   "--display-name=${DISPLAY_NAME}"

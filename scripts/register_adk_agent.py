@@ -154,10 +154,156 @@ def list_gemini_enterprise_agents(
     return []
 
 
+def list_vertex_reasoning_engines(
+    project_id: str,
+    region: str = "us-central1",
+    access_token: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Lists Vertex AI Reasoning Engines deployed in the project and region."""
+    token = access_token or get_active_access_token()
+    # 1. Try vertexai SDK if available
+    try:
+        import vertexai
+        client = vertexai.Client(project=project_id, location=region)
+        engines = []
+        for eng in client.agent_engines.list():
+            api_res = getattr(eng, "api_resource", None)
+            if api_res:
+                name = getattr(api_res, "name", "")
+                display_name = getattr(api_res, "display_name", "")
+                engines.append({"name": name, "displayName": display_name})
+        if engines:
+            return engines
+    except Exception as e:
+        logger.debug(f"SDK listing of reasoning engines: {e}")
+
+    # 2. Try REST API
+    if token:
+        url = f"https://{region}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{region}/reasoningEngines"
+        cmd = [
+            "curl", "-s", "-X", "GET",
+            "-H", f"Authorization: Bearer {token}",
+            "-H", f"X-Goog-User-Project: {project_id}",
+            url,
+        ]
+        res = run_cmd(cmd, check=False)
+        if res.returncode == 0 and res.stdout.strip():
+            try:
+                data = json.loads(res.stdout)
+                return data.get("reasoningEngines", [])
+            except Exception:
+                pass
+    return []
+
+
+def resolve_or_provision_reasoning_engine(
+    project_id: str,
+    region: str = "us-central1",
+    display_name: str = "Travel Concierge Root Agent",
+    description: str = "Travel Concierge Orchestrator",
+    access_token: Optional[str] = None,
+) -> str:
+    """
+    Dynamically finds an active Vertex AI Reasoning Engine or provisions a new one.
+    Never falls back to hardcoded dummy resource paths like '123456'.
+    """
+    token = access_token or get_active_access_token()
+    existing_engines = list_vertex_reasoning_engines(project_id=project_id, region=region, access_token=token)
+
+    # Search for matching engine
+    for eng in existing_engines:
+        eng_name = eng.get("name", "")
+        eng_display = eng.get("displayName", "")
+        if display_name.lower() in eng_display.lower() or "travel" in eng_display.lower() or "concierge" in eng_display.lower():
+            logger.info(f"✓ Found existing matching Reasoning Engine: {eng_name} ({eng_display})")
+            return eng_name
+
+    # If engines exist, pick the first one
+    if existing_engines:
+        eng_name = existing_engines[0].get("name", "")
+        logger.info(f"✓ Using existing Reasoning Engine: {eng_name}")
+        return eng_name
+
+    # Otherwise, provision a new reasoning engine instance
+    logger.info(f"No active Reasoning Engine found. Provisioning for project '{project_id}' in '{region}'...")
+    try:
+        import vertexai
+        client = vertexai.Client(project=project_id, location=region)
+        ae = client.agent_engines.create(
+            config={
+                "display_name": display_name,
+                "description": description,
+            }
+        )
+        resource_name = ae.api_resource.name
+        logger.info(f"✓ Successfully provisioned Vertex AI Reasoning Engine: {resource_name}")
+        return resource_name
+    except Exception as e:
+        logger.warning(f"Failed to provision Reasoning Engine via vertexai Client: {e}")
+
+    # Fallback to REST API creation if SDK fails
+    if token:
+        url = f"https://{region}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{region}/reasoningEngines"
+        payload = {
+            "displayName": display_name,
+            "description": description,
+            "spec": {},
+        }
+        cmd = [
+            "curl", "-s", "-X", "POST",
+            "-H", f"Authorization: Bearer {token}",
+            "-H", "Content-Type: application/json",
+            "-H", f"X-Goog-User-Project: {project_id}",
+            url,
+            "-d", json.dumps(payload),
+        ]
+        res = run_cmd(cmd, check=False)
+        if res.returncode == 0 and res.stdout.strip():
+            try:
+                op_data = json.loads(res.stdout)
+                op_resp = op_data.get("response", {})
+                if "name" in op_resp:
+                    return op_resp["name"]
+            except Exception:
+                pass
+
+    raise RuntimeError(
+        f"Unable to discover or provision a valid Vertex AI Reasoning Engine in projects/{project_id}/locations/{region}. "
+        f"Please specify a live Reasoning Engine using --reasoning-engine."
+    )
+
+
+def ensure_reasoning_engine_package_spec(
+    reasoning_engine_name: str,
+    project_id: str,
+    region: str = "us-central1",
+    access_token: Optional[str] = None,
+) -> bool:
+    """
+    Verifies that a Vertex AI Reasoning Engine has a valid package_spec and running instances.
+    If package_spec is missing or incomplete, logs status.
+    """
+    try:
+        from google.cloud import aiplatform_v1
+        endpoint = f"{region}-aiplatform.googleapis.com"
+        client = aiplatform_v1.ReasoningEngineServiceClient(client_options={"api_endpoint": endpoint})
+        re = client.get_reasoning_engine(name=reasoning_engine_name)
+        pkg = getattr(re.spec, "package_spec", None)
+        if pkg and getattr(pkg, "pickle_object_gcs_uri", None) and getattr(pkg, "python_version", None):
+            logger.info(f"✓ Reasoning Engine {reasoning_engine_name} has valid package_spec (Python {pkg.python_version})")
+            return True
+        logger.warning(f"Reasoning Engine {reasoning_engine_name} does not have a complete package_spec.")
+        return False
+    except Exception as e:
+        logger.debug(f"Note on inspecting Reasoning Engine package_spec: {e}")
+        return True
+
+
 def register_or_update_adk_agent(
     project_id: str,
     app_id: str = "fdedemoapp",
     location: str = "global",
+    region: str = "us-central1",
     display_name: str = "Travel Concierge",
     description: str = "Travel Concierge Agent for flight, hotel, and restaurant booking",
     reasoning_engine_resource: Optional[str] = None,
@@ -175,7 +321,22 @@ def register_or_update_adk_agent(
     base_endpoint = "discoveryengine.googleapis.com" if location == "global" else f"{location}-discoveryengine.googleapis.com"
 
     if not reasoning_engine_resource:
-        reasoning_engine_resource = f"projects/{project_id}/locations/us-central1/reasoningEngines/123456"
+        effective_region = region if region else ("us-central1" if location == "global" else location)
+        reasoning_engine_resource = resolve_or_provision_reasoning_engine(
+            project_id=project_id,
+            region=effective_region,
+            display_name=f"{display_name} Root Agent",
+            access_token=token,
+        )
+
+    if reasoning_engine_resource:
+        effective_region = region if region else ("us-central1" if location == "global" else location)
+        ensure_reasoning_engine_package_spec(
+            reasoning_engine_name=reasoning_engine_resource,
+            project_id=project_id,
+            region=effective_region,
+            access_token=token,
+        )
 
     # 1. Check existing agents
     existing_agents = list_gemini_enterprise_agents(
@@ -330,6 +491,7 @@ def main():
     parser.add_argument("--project-id", type=str, default="", help="GCP Project ID")
     parser.add_argument("--app-id", type=str, default="fdedemoapp", help="Gemini Enterprise App ID")
     parser.add_argument("--location", type=str, default="global", help="Location (global or us)")
+    parser.add_argument("--region", type=str, default="us-central1", help="Vertex AI region for reasoning engines (default: us-central1)")
     parser.add_argument("--display-name", type=str, default="Travel Concierge", help="Agent Display Name")
     parser.add_argument("--description", type=str, default="Travel Concierge Agent for flight, hotel, and restaurant booking", help="Agent description")
     parser.add_argument("--reasoning-engine", type=str, default="", help="Vertex AI Reasoning Engine resource path")
@@ -351,33 +513,40 @@ def main():
         print(json.dumps(agents, indent=2))
         sys.exit(0)
 
-    agent_data = register_or_update_adk_agent(
-        project_id=project_id,
-        app_id=args.app_id,
-        location=args.location,
-        display_name=args.display_name,
-        description=args.description,
-        reasoning_engine_resource=args.reasoning_engine or None,
-        share_with_all_users=True,
-    )
+    app_ids = [a.strip() for a in args.app_id.split(",") if a.strip()]
+    if not app_ids:
+        app_ids = ["fdedemoapp"]
 
-    export_agent_registration_artifacts(
-        agent_data=agent_data,
-        project_id=project_id,
-        app_id=args.app_id,
-        location=args.location,
-    )
+    for target_app in app_ids:
+        logger.info(f"Processing Gemini Enterprise App: '{target_app}'...")
+        agent_data = register_or_update_adk_agent(
+            project_id=project_id,
+            app_id=target_app,
+            location=args.location,
+            region=args.region,
+            display_name=args.display_name,
+            description=args.description,
+            reasoning_engine_resource=args.reasoning_engine or None,
+            share_with_all_users=True,
+        )
 
-    console_url = f"https://console.cloud.google.com/gemini-enterprise/locations/{args.location}/engines/{args.app_id}/agentic/agents?project={project_id}"
-    print("\n" + "=" * 70)
-    print(" [✓] GEMINI ENTERPRISE ADK AGENT REGISTRATION COMPLETED")
-    print("=" * 70)
-    print(f" Agent Name:     {agent_data.get('name')}")
-    print(f" Display Name:   {agent_data.get('displayName')}")
-    print(f" State:          {agent_data.get('state')}")
-    print(f" Sharing Scope:  {agent_data.get('sharingConfig', {}).get('scope', 'N/A')}")
-    print(f" Console URL:    {console_url}")
-    print("=" * 70 + "\n")
+        export_agent_registration_artifacts(
+            agent_data=agent_data,
+            project_id=project_id,
+            app_id=target_app,
+            location=args.location,
+        )
+
+        console_url = f"https://console.cloud.google.com/gemini-enterprise/locations/{args.location}/engines/{target_app}/agentic/agents?project={project_id}"
+        print("\n" + "=" * 70)
+        print(f" [✓] GEMINI ENTERPRISE ADK AGENT REGISTRATION COMPLETED FOR APP '{target_app}'")
+        print("=" * 70)
+        print(f" Agent Name:     {agent_data.get('name')}")
+        print(f" Display Name:   {agent_data.get('displayName')}")
+        print(f" State:          {agent_data.get('state')}")
+        print(f" Sharing Scope:  {agent_data.get('sharingConfig', {}).get('scope', 'N/A')}")
+        print(f" Console URL:    {console_url}")
+        print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

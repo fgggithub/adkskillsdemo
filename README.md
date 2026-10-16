@@ -2,7 +2,7 @@
 
 An enterprise multi-agent travel planning platform built on **Google Agent Development Kit (ADK)**, **Gemini 3.5**, **Model Armor**, and **OpenTelemetry**. Demonstrates Zero-Trust inter-agent communication (A2A), Model Context Protocol (MCP), dynamic model escalation, and explicit context caching—engineered to run within a strict **$5.00 project budget** with **zero persistent infrastructure costs**.
 
-For full architecture diagrams, sequence flows, and itemized GCP cost breakdowns, see [ARCHITECTURE.MD](file:///home/student_01_326a07226030/adkskillsdemo/ARCHITECTURE.MD).
+For full architecture diagrams, sequence flows, and itemized GCP cost breakdowns, see [ARCHITECTURE.MD](ARCHITECTURE.MD).
 
 ---
 
@@ -14,24 +14,26 @@ For full architecture diagrams, sequence flows, and itemized GCP cost breakdowns
 5. [Local Testing Instructions](#local-testing-instructions)
 6. [Evaluation Testing Instructions](#evaluation-testing-instructions)
 7. [GCP API Enablement](#gcp-api-enablement)
-8. [Cloud Deployment & Estimated Times](#cloud-deployment--estimated-times)
+8. [Cloud Deployment & Step-by-Step Execution Order](#cloud-deployment--step-by-step-execution-order)
 9. [Google Auth Platform & OAuth Clients (Gemini Enterprise)](#google-auth-platform--oauth-clients-gemini-enterprise)
-10. [Testing the Deployed Application (Laptop & Console)](#testing-the-deployed-application-laptop--console)
-11. [Teardown & Zero Residual Cost Verification](#teardown--zero-residual-cost-verification)
-12. [Cost Tracking & Budget Auditing](#cost-tracking--budget-auditing)
+10. [Gemini Enterprise App Creation (Discovery Engine)](#gemini-enterprise-app-creation-discovery-engine)
+11. [ADK Agent & Reasoning Engine Registration](#adk-agent--reasoning-engine-registration)
+12. [Testing the Deployed Application (Laptop & Console)](#testing-the-deployed-application-laptop--console)
+13. [Teardown & Zero Residual Cost Verification](#teardown--zero-residual-cost-verification)
+14. [Cost Tracking & Budget Auditing](#cost-tracking--budget-auditing)
 
 ---
 
 ## Core Features
 
-- **Multi-Agent Orchestration (A2A)**: Coordinated by `TravelConciergeRootAgent` in [travel_concierge/agents/root_agent.py](file:///home/student_01_326a07226030/adkskillsdemo/travel_concierge/agents/root_agent.py):
+- **Multi-Agent Orchestration (A2A)**: Coordinated by `TravelConciergeRootAgent` in [travel_concierge/agents/root_agent.py](travel_concierge/agents/root_agent.py):
   - **Hotel Specialist Agent**: Reserves accommodations and passes immutable reference task IDs (`task-hotel-...`).
   - **Restaurant Specialist Agent**: Integrates with Zomato MCP Server and executes the `dietary_advisor` ADK Skill to filter and rank dining candidates.
   - **Verification Agent**: Provides streaming Human-in-the-Loop (HITL) task confirmation before payment authorization.
 - **Gemini Enterprise StreamAssist Web Portal**:
-  - Live interactive Single-Page Application (SPA) front-ending the multi-agent system via Discovery Engine's `streamAssist` API protocol ([travel_concierge/portal/](file:///home/student_01_326a07226030/adkskillsdemo/travel_concierge/portal/)).
+  - Live interactive Single-Page Application (SPA) front-ending the multi-agent system via Discovery Engine's `streamAssist` API protocol ([travel_concierge/portal/](travel_concierge/portal/)).
   - Real-time Server-Sent Events (SSE) streaming delivering progressive `answerText`, interactive `plannerSteps` diagnostic reasoning, grounded citation cards, and one-click demo presets.
-- **Agent Gateway Policy Enforcement Point (PEP)**: Enforced via `GatewayPolicyMiddleware` in [travel_concierge/security/gateway_policy.py](file:///home/student_01_326a07226030/adkskillsdemo/travel_concierge/security/gateway_policy.py):
+- **Agent Gateway Policy Enforcement Point (PEP)**: Enforced via `GatewayPolicyMiddleware` in [travel_concierge/security/gateway_policy.py](travel_concierge/security/gateway_policy.py):
   - Enforces **Model Armor** directly at the Gateway ingress layer, terminating malicious requests with HTTP `403 Forbidden` before agents or LLMs execute.
   - Guards against **Prompt Injection**, **Hate Speech & Harassment**, and **Criminal Fraud / Exploitation**.
 - **Multi-Turn Itinerary Refinement**:
@@ -48,7 +50,7 @@ For full architecture diagrams, sequence flows, and itemized GCP cost breakdowns
 
 ## Gemini Enterprise StreamAssist Web Portal
 
-The **StreamAssist Web Portal** ([travel_concierge/portal/](file:///home/student_01_326a07226030/adkskillsdemo/travel_concierge/portal/)) provides a Google Cloud / Gemini Enterprise styled web interface demonstrating live interaction with the multi-agent travel concierge via the official **Google Cloud Discovery Engine `streamAssist` API** specification.
+The **StreamAssist Web Portal** ([travel_concierge/portal/](travel_concierge/portal/)) provides a Google Cloud / Gemini Enterprise styled web interface demonstrating live interaction with the multi-agent travel concierge via the official **Google Cloud Discovery Engine `streamAssist` API** specification.
 
 ### Key Capabilities:
 1. **Server-Sent Events (SSE) Streaming**: Progressive rendering of answer tokens matching the Google Cloud `StreamAssistResponse` schema (`google.cloud.discoveryengine_v1.AssistantServiceClient.stream_assist`).
@@ -117,7 +119,7 @@ pip install -r requirements.txt
 ```
 
 ### 1. Run Complete Pytest Suite
-Runs all 83 unit, security, telemetry, circuit breaker, auth platform, and Gemini Enterprise app tests:
+Runs all 93 unit, security, telemetry, circuit breaker, auth platform, and Gemini Enterprise ADK agent tests:
 ```bash
 pytest -v
 ```
@@ -195,15 +197,17 @@ This script enables:
 
 ---
 
-## Cloud Deployment & Estimated Times
+## Cloud Deployment & Step-by-Step Execution Order
 
-The automated deployment script handles end-to-end infrastructure setup, skills registration, container building, Cloud Run deployment, Google Auth Platform configuration, and Gemini Enterprise agent registration.
+### Option A: All-in-One Automated Deployment
+
+The automated deployment script handles end-to-end infrastructure setup, skills registration, container building, Cloud Run deployment, Google Auth Platform configuration, Gemini Enterprise app creation, and ADK agent registration across both engines in a single command:
 
 ```bash
 bash scripts/deploy.sh
 ```
 
-### Estimated Deployment Times
+#### Estimated Deployment Times
 | Phase | Action | Estimated Duration |
 | :--- | :--- | :--- |
 | **Phase 1** | API Enablement (`scripts/enable_apis.sh`) | ~15 – 20 seconds |
@@ -212,8 +216,148 @@ bash scripts/deploy.sh
 | **Phase 4** | Container Build & Push to Artifact Registry | ~45 – 60 seconds |
 | **Phase 5** | Cloud Run Service Deployment (`google_cloud_run_v2_service`) | ~30 – 40 seconds |
 | **Phase 6** | Google Auth Platform & OAuth Clients Setup (`scripts/setup_auth_platform.sh`) | ~10 – 15 seconds |
-| **Phase 7** | Agent Registry Registration, Health Checks & Budget Audit | ~5 – 10 seconds |
-| **Total** | **Full End-to-End Automated Deployment** | **~2m 10s – 2m 50s** |
+| **Phase 7** | Agent Registry & Gemini Enterprise Registration (`register_agents.py`, `create_gemini_enterprise_app.sh`, `register_adk_agent.sh` for both engines), Health Checks & Budget Audit | ~20 – 30 seconds |
+| **Total** | **Full End-to-End Automated Deployment** | **~2m 20s – 3m 10s** |
+
+---
+
+### Option B: Step-by-Step Manual Deployment Order (Individual Scripts)
+
+If you prefer to run the pipeline manually or step through each phase individually, execute the scripts in the following exact order:
+
+```bash
+# Set common environment variables
+export PROJECT_ID="$(gcloud config get-value project)"
+export REGION="us-central1"
+export LOCATION="global"
+export REPO_NAME="travel-concierge-repo"
+export SERVICE_NAME="travel-concierge-orchestrator"
+```
+
+#### Step 1: Enable Required GCP APIs
+Enable Vertex AI, Cloud Run, Discovery Engine, Model Armor, and Agent Platform APIs:
+```bash
+bash scripts/enable_apis.sh
+```
+
+#### Step 2: Register ADK Skills in Agent Runtime
+Register the `dietary_advisor` Skill in the Google Cloud Agent Runtime:
+```bash
+python3 scripts/register_skills.py --project-id="${PROJECT_ID}" --location="${REGION}"
+```
+
+#### Step 3: Initialize & Provision Core Terraform Infrastructure
+Provision Artifact Registry repository, Service Accounts, IAM bindings, and Secret Manager:
+```bash
+terraform -chdir=deploy/terraform init
+terraform -chdir=deploy/terraform apply \
+  -var="project_id=${PROJECT_ID}" \
+  -var="region=${REGION}" \
+  -var="service_name=${SERVICE_NAME}" \
+  -target=google_artifact_registry_repository.app_repo \
+  -target=google_service_account.concierge_sa \
+  -target=google_project_iam_member.vertex_ai_user \
+  -target=google_project_iam_member.cloud_trace_agent \
+  -target=google_secret_manager_secret.api_credentials \
+  -auto-approve
+```
+
+#### Step 4: Build & Push Docker Container Image
+Build the multi-agent application container and push it to Artifact Registry:
+```bash
+IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/travel-concierge:latest"
+docker build -t "${IMAGE_URI}" -f deploy/Dockerfile .
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+docker push "${IMAGE_URI}"
+```
+
+#### Step 5: Deploy Cloud Run Services via Terraform
+Deploy the `travel-concierge-orchestrator` and `agent-gateway-pep` Cloud Run services:
+```bash
+terraform -chdir=deploy/terraform apply \
+  -var="project_id=${PROJECT_ID}" \
+  -var="region=${REGION}" \
+  -var="service_name=${SERVICE_NAME}" \
+  -var="container_image=${IMAGE_URI}" \
+  -auto-approve
+
+# Capture deployed Cloud Run service URLs
+export SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)')
+export GATEWAY_URL=$(gcloud run services describe agent-gateway-pep --region="${REGION}" --project="${PROJECT_ID}" --format='value(status.url)' 2>/dev/null || echo "")
+echo "Deployed Service URL: ${SERVICE_URL}"
+```
+
+#### Step 6: Configure Google Auth Platform & OAuth Clients
+Configure OAuth Brand, OAuth 2.0 Web Client, and Agent Identity Auth Provider (`travel-concierge-auth`):
+```bash
+bash scripts/setup_auth_platform.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --service-url="${SERVICE_URL}"
+```
+
+#### Step 7: Register Root Agent in GCP Agent Registry
+Register the root agent in Agent Registry with standard A2A Agent Card metadata:
+```bash
+python3 scripts/register_agents.py \
+  --service-url="${SERVICE_URL}" \
+  --region="${REGION}" \
+  --project-id="${PROJECT_ID}"
+```
+
+#### Step 8: Provision Gemini Enterprise App (Discovery Engine)
+Provision conversational engine `fdedemoapp` and configure agent identity bindings:
+```bash
+bash scripts/create_gemini_enterprise_app.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --service-url="${SERVICE_URL}" \
+  --app-id="fdedemoapp"
+```
+
+#### Step 9: Register ADK Agent with Vertex AI Reasoning Engine (Both Engines)
+Deploy and package the Reasoning Engine container instances and register the ADK agent into Gemini Enterprise assistants:
+```bash
+# Register in fdedemoapp
+bash scripts/register_adk_agent.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --app-id="fdedemoapp" \
+  --location="global" \
+  --display-name="Travel Concierge"
+
+# Also register in Terraform-managed Gemini Enterprise engine (if present)
+TF_ENGINE_ID=$(terraform -chdir=deploy/terraform output -raw gemini_enterprise_app_id 2>/dev/null || echo "")
+if [[ -n "${TF_ENGINE_ID}" && "${TF_ENGINE_ID}" != "fdedemoapp" ]]; then
+  bash scripts/register_adk_agent.sh \
+    --project-id="${PROJECT_ID}" \
+    --region="${REGION}" \
+    --app-id="${TF_ENGINE_ID}" \
+    --location="global" \
+    --display-name="Travel Concierge"
+fi
+
+# Note: You can also register across both engines simultaneously with Python:
+# python3 scripts/register_adk_agent.py --project-id="${PROJECT_ID}" --app-id="fdedemoapp,${TF_ENGINE_ID}" --location="global" --region="${REGION}" --display-name="Travel Concierge"
+```
+
+#### Step 10: Run Deployed Smoke & Verification Tests
+Verify all 7 live integration probes (Health, Agent Card, Travel Planning, Refinement, StreamAssist SSE, Model Armor PEP, Gateway):
+```bash
+bash scripts/test_deployed.sh
+```
+
+#### Step 11: Audit Project Budget & Token Costs
+Check cumulative token consumption and verify cost remains strictly under the $5.00 limit:
+```bash
+python3 scripts/cost_report.py
+```
+
+#### Step 12: Clean Teardown & Residual Cost Verification (When Finished)
+Destroy all deployed cloud resources and audit lingering billable components:
+```bash
+bash scripts/teardown.sh
+```
 
 ---
 
@@ -267,9 +411,9 @@ bash scripts/setup_auth_platform.sh \
 
 ---
 
-## Gemini Enterprise App 'fdedemoapp' Creation & Agent Registration
+## Gemini Enterprise App Creation (Discovery Engine)
 
-To deploy and register the agent with Gemini Enterprise (Vertex AI Search & Conversation / Discovery Engine), run the dedicated provisioning script [`scripts/create_gemini_enterprise_app.sh`](file:///home/student_01_508858ca291d/adkskillsdemo/scripts/create_gemini_enterprise_app.sh) or its underlying Python implementation [`scripts/create_gemini_enterprise_app.py`](file:///home/student_01_508858ca291d/adkskillsdemo/scripts/create_gemini_enterprise_app.py):
+To deploy and configure conversational engines in Gemini Enterprise (Vertex AI Search & Conversation / Discovery Engine), run the dedicated provisioning script [`scripts/create_gemini_enterprise_app.sh`](scripts/create_gemini_enterprise_app.sh) or its underlying Python implementation [`scripts/create_gemini_enterprise_app.py`](scripts/create_gemini_enterprise_app.py):
 
 ```bash
 # Provision Gemini Enterprise App 'fdedemoapp' and register root agent
@@ -299,6 +443,55 @@ bash scripts/create_gemini_enterprise_app.sh \
    - Run `python3 scripts/create_gemini_enterprise_app.py --teardown --project-id="${PROJECT_ID}" --app-id="fdedemoapp"` to cleanly delete the engine and agent bindings.
 
 ---
+
+## ADK Agent & Reasoning Engine Registration
+
+To register the ADK Agent (`Travel Concierge`) with Gemini Enterprise assistants backed by a live Vertex AI Reasoning Engine, run [`scripts/register_adk_agent.sh`](scripts/register_adk_agent.sh) or [`scripts/register_adk_agent.py`](scripts/register_adk_agent.py):
+
+```bash
+# Register ADK Agent in Gemini Enterprise App 'fdedemoapp'
+bash scripts/register_adk_agent.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --app-id="fdedemoapp" \
+  --location="global" \
+  --display-name="Travel Concierge"
+
+# Register in Terraform-managed Gemini Enterprise engine
+bash scripts/register_adk_agent.sh \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --app-id="gemini-enterprise-engine-7964c41b" \
+  --location="global" \
+  --display-name="Travel Concierge"
+
+# Or register across both engines simultaneously with Python:
+python3 scripts/register_adk_agent.py \
+  --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
+  --app-id="fdedemoapp,gemini-enterprise-engine-7964c41b" \
+  --location="global" \
+  --display-name="Travel Concierge"
+```
+
+### What this script creates and configures:
+1. **Dynamic Vertex AI Reasoning Engine Discovery & Provisioning**:
+   - Dynamically searches for existing Reasoning Engines matching `"Travel Concierge Root Agent"` in Vertex AI (`us-central1`), automatically discovering live resource IDs.
+   - Eliminates placeholder IDs (e.g. `123456`) and provisions a new Reasoning Engine if one does not exist.
+2. **Container Package Specification & Runtime Validation (`spec.package_spec`)**:
+   - Validates that the Reasoning Engine has a valid `package_spec` and running container instances (`python_version: 3.12`, serialized `pickle_object_gcs_uri`, and `requirements_gcs_uri`).
+   - Prevents `FAILED_PRECONDITION (400)` errors in Discovery Engine StreamAssist by ensuring the container runtime is healthy before registration.
+3. **Class Methods & Streaming Operations**:
+   - Registers operation schemas for `query` and `stream_query` (`api_mode: "stream"`).
+4. **Idempotent Gemini Enterprise Assistant Registration**:
+   - Idempotently creates or updates the agent definition (`adkAgentDefinition.provisionedReasoningEngine.reasoningEngine`) under Discovery Engine assistants:
+     `projects/{project}/locations/{location}/collections/default_collection/engines/{app_id}/assistants/default_assistant/agents/{agent_id}`.
+   - Sets `sharingConfig: {scope: "ALL_USERS"}` so that all authorized enterprise users can interact with the agent.
+5. **Multi-Engine Support**:
+   - Supports single engine IDs or comma-separated engine IDs (e.g. `--app-id="fdedemoapp,gemini-enterprise-engine-7964c41b"`), registering and synchronizing both manual and Terraform-managed Discovery Engine apps.
+6. **Configuration Artifacts**:
+   - `deploy/gemini_enterprise_agent_registration.json`: Exported JSON registration descriptor.
+   - `deploy/agent_gateway/gemini_enterprise_agent_registration.yaml`: Exported YAML for the Managed Agent Gateway PEP.
 
 ## Testing the Deployed Application (Laptop & Console)
 

@@ -173,13 +173,25 @@ bash scripts/create_gemini_enterprise_app.sh \
   --service-url="${SERVICE_URL}" \
   --app-id="fdedemoapp"
 
-# Register ADK Agent in Gemini Enterprise App assistant
-echo "[+] Registering ADK Agent 'Travel Concierge' in Gemini Enterprise App..."
+# Register ADK Agent in Gemini Enterprise App assistants (for both fdedemoapp and Terraform engine)
+echo "[+] Registering ADK Agent 'Travel Concierge' in Gemini Enterprise App 'fdedemoapp'..."
 bash scripts/register_adk_agent.sh \
   --project-id="${PROJECT_ID}" \
+  --region="${REGION}" \
   --app-id="fdedemoapp" \
   --location="global" \
   --display-name="Travel Concierge"
+
+TF_ENGINE_ID=$(resolve_deploy_url "" "gemini_enterprise_app_id")
+if [[ -n "${TF_ENGINE_ID}" && "${TF_ENGINE_ID}" != "fdedemoapp" ]]; then
+  echo "[+] Registering ADK Agent 'Travel Concierge' in Terraform Gemini Enterprise App '${TF_ENGINE_ID}'..."
+  bash scripts/register_adk_agent.sh \
+    --project-id="${PROJECT_ID}" \
+    --region="${REGION}" \
+    --app-id="${TF_ENGINE_ID}" \
+    --location="global" \
+    --display-name="Travel Concierge"
+fi
 
 echo "      Checking Root Orchestrator /health..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVICE_URL}/health" || echo "failed")
