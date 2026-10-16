@@ -25,12 +25,21 @@ REQUIRED_SERVICES=(
   "artifactregistry.googleapis.com"
   "secretmanager.googleapis.com"
   "iam.googleapis.com"
+  "iamcredentials.googleapis.com"
+  "cloudresourcemanager.googleapis.com"
   "cloudbuild.googleapis.com"
+  "compute.googleapis.com"
   "iap.googleapis.com"
+  "agentregistry.googleapis.com"
   "agentidentity.googleapis.com"
   "agentidentitycredentials.googleapis.com"
   "discoveryengine.googleapis.com"
   "dialogflow.googleapis.com"
+  "modelarmor.googleapis.com"
+  "networkservices.googleapis.com"
+  "networksecurity.googleapis.com"
+  "serviceextensions.googleapis.com"
+  "storage.googleapis.com"
 )
 
 for svc in "${REQUIRED_SERVICES[@]}"; do

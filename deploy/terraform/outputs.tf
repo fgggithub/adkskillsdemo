@@ -47,3 +47,23 @@ output "agent_platform_gateway_name" {
   description = "Fully-qualified resource name of the Google Cloud Agent Platform Agent Gateway"
   value       = "projects/${var.project_id}/locations/${var.region}/agentGateways/travel-concierge-gateway"
 }
+
+output "gemini_enterprise_app_id" {
+  description = "Engine ID of the Gemini Enterprise Web App"
+  value       = google_discovery_engine_search_engine.gemini_search_engine.engine_id
+}
+
+output "gemini_enterprise_app_name" {
+  description = "Full resource name of the Gemini Enterprise Web App"
+  value       = google_discovery_engine_search_engine.gemini_search_engine.name
+}
+
+output "gemini_enterprise_data_store_id" {
+  description = "Data Store ID attached to Gemini Enterprise"
+  value       = google_discovery_engine_data_store.gemini_search_store.data_store_id
+}
+
+output "gemini_enterprise_console_url" {
+  description = "Direct URL to view and preview the Gemini Enterprise Web App in the Google Cloud Console"
+  value       = "https://console.cloud.google.com/gemini-enterprise?project=${var.project_id}"
+}

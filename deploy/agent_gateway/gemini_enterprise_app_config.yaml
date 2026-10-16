@@ -1,39 +1,25 @@
-app_id: fdedemoapp
-engine_id: fdedemoapp
-display_name: fdedemoapp
-solution_type: SOLUTION_TYPE_CHAT
-project_id: qwiklabs-gcp-04-f5ed5822b013
-project_number: '301388663977'
+app_id: gemini-enterprise-engine-08ab4902
+engine_id: gemini-enterprise-engine-08ab4902
+display_name: Gemini Enterprise App
+solution_type: SOLUTION_TYPE_SEARCH
+app_type: APP_TYPE_INTRANET
+project_id: qwiklabs-gcp-04-6d35b13fa41b
+project_number: '1085688005479'
 location: global
 region: us-central1
 collection: default_collection
-engine_path: projects/qwiklabs-gcp-04-f5ed5822b013/locations/global/collections/default_collection/engines/fdedemoapp
-assistant_path: projects/qwiklabs-gcp-04-f5ed5822b013/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant
-stream_assist_session_template: projects/qwiklabs-gcp-04-f5ed5822b013/locations/global/collections/default_collection/engines/fdedemoapp/sessions/{session_id}
+engine_path: projects/1085688005479/locations/global/collections/default_collection/engines/gemini-enterprise-engine-08ab4902
+assistant_path: projects/1085688005479/locations/global/collections/default_collection/engines/gemini-enterprise-engine-08ab4902/assistants/default_assistant
 registered_agents:
 - agent_id: travel-concierge-orchestrator
   service_name: travel-concierge-orchestrator
-  service_url: https://travel-concierge-orchestrator-dof4clhgrq-uc.a.run.app
-  portal_url: https://travel-concierge-orchestrator-dof4clhgrq-uc.a.run.app/portal
-  stream_url: https://travel-concierge-orchestrator-dof4clhgrq-uc.a.run.app/portal/api/stream
-  agent_card_url: https://travel-concierge-orchestrator-dof4clhgrq-uc.a.run.app/.well-known/agent-card.json
+  service_url: https://travel-concierge-orchestrator-fcpuickwra-uc.a.run.app
+  portal_url: https://travel-concierge-orchestrator-fcpuickwra-uc.a.run.app/portal
+  stream_url: https://travel-concierge-orchestrator-fcpuickwra-uc.a.run.app/portal/api/stream
+  agent_card_url: https://travel-concierge-orchestrator-fcpuickwra-uc.a.run.app/.well-known/agent-card.json
   auth_provider_id: travel-concierge-auth
-  auth_provider_resource: projects/qwiklabs-gcp-04-f5ed5822b013/locations/us-central1/authProviders/travel-concierge-auth
-  binding_id: fdedemoapp-travel-concierge-binding
+  auth_provider_resource: projects/qwiklabs-gcp-04-6d35b13fa41b/locations/us-central1/authProviders/travel-concierge-auth
+  binding_id: gemini-enterprise-app-binding
   binding_urn: urn:agent:travel-concierge:default:travel-concierge-orchestrator
-engine_metadata:
-  name: projects/301388663977/locations/global/collections/default_collection/engines/fdedemoapp
-  display_name: fdedemoapp
-  data_store_ids:
-  - init-ds
-  solution_type: 2
-  search_engine_config:
-    search_tier: 2
-    search_add_ons:
-    - 1
-  common_config:
-    company_name: Travel Concierge
-  industry_vertical: 1
-  disable_analytics: false
-created_at: '2026-10-15T14:15:43Z'
+  adk_agent_resource: projects/1085688005479/locations/global/collections/default_collection/engines/gemini-enterprise-engine-08ab4902/assistants/default_assistant/agents/4028828987283356192
 status: ACTIVE

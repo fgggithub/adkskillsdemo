@@ -18,32 +18,51 @@ logger = logging.getLogger("travel_concierge.restaurant_agent")
 tracer = get_tracer("travel_concierge.restaurant_agent")
 
 
+from google.protobuf.json_format import ParseDict
+from a2a.types import AgentCard
+import httpx
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+from travel_concierge.gateway.client import DEFAULT_SUBAGENT_TOKENS
+
+
 def create_restaurant_subagent(
+    endpoint_url: Optional[str] = None,
+    use_gateway: bool = False,
     cached_content_name: Optional[str] = None,
     tools: Optional[List[Any]] = None,
-) -> Agent:
-    """Factory creating the production Restaurant Booking Specialist Agent."""
-    if tools is None:
-        tools = []
-        zomato_toolset = get_zomato_mcp_toolset()
-        if isinstance(zomato_toolset, list):
-            tools.extend(zomato_toolset)
-        elif zomato_toolset is not None:
-            tools.append(zomato_toolset)
+    auth_token: str = "signed-jwt-or-opaque-auth-token",
+) -> RemoteA2aAgent:
+    """Factory creating RemoteA2aAgent for Restaurant Booking Specialist."""
+    if use_gateway:
+        target_url = f"{settings.endpoints.agent_gateway_url}/agents/restaurant-booking-specialist"
+    else:
+        target_url = endpoint_url or settings.endpoints.restaurant_service_url
 
-        skill_toolset = get_skill_registry_toolset()
-        if isinstance(skill_toolset, list):
-            tools.extend(skill_toolset)
-        elif skill_toolset is not None:
-            tools.append(skill_toolset)
+    card = AgentCard()
+    ParseDict({
+        "name": "restaurant_booking_specialist",
+        "description": "Remote A2A Agent for dining search via Zomato MCP and dietary compliance skill.",
+        "supported_interfaces": [
+            {
+                "url": target_url,
+                "protocol_binding": "JSONRPC",
+                "protocol_version": "1.0",
+            }
+        ],
+    }, card)
 
-    return Agent(
+    token = DEFAULT_SUBAGENT_TOKENS.get("restaurant-booking-specialist", auth_token)
+    httpx_client = httpx.AsyncClient(
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30.0,
+    )
+
+    return RemoteA2aAgent(
         name="restaurant_booking_specialist",
-        model=settings.model_name,
         description="Handles searching restaurants and dining options via Zomato MCP.",
-        instruction=SHARED_SYSTEM_INSTRUCTION,
-        tools=tools,
-        generate_content_config=get_generation_config(cached_content=cached_content_name),
+        agent_card=card,
+        httpx_client=httpx_client,
+        use_legacy=False,
     )
 
 

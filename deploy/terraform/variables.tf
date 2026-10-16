@@ -9,6 +9,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "location" {
+  type        = string
+  description = "Location of Gemini Enterprise deployment. Can be us, eu, or global."
+  default     = "global"
+}
+
 variable "environment" {
   type        = string
   description = "Deployment environment (e.g. prod, staging, dev)"

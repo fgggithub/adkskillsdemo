@@ -3,12 +3,25 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.30"
+      version = "~> 7.20"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 7.20"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
     }
   }
 }
 
 provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+provider "google-beta" {
   project = var.project_id
   region  = var.region
 }
@@ -22,11 +35,17 @@ resource "google_project_service" "enabled_apis" {
     "artifactregistry.googleapis.com",
     "secretmanager.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "compute.googleapis.com",
     "iap.googleapis.com",
+    "agentregistry.googleapis.com",
     "agentidentity.googleapis.com",
     "agentidentitycredentials.googleapis.com",
     "discoveryengine.googleapis.com",
     "dialogflow.googleapis.com",
+    "storage.googleapis.com",
   ])
 
   service            = each.key

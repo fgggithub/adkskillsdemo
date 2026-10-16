@@ -17,6 +17,36 @@ logger = logging.getLogger("travel_concierge.hotel_agent")
 tracer = get_tracer("travel_concierge.hotel_agent")
 
 
+def search_and_hold_hotel(
+    location: str = "Tokyo Shinjuku",
+    checkin: str = "2026-09-01",
+    checkout: str = "2026-09-05",
+    guests: int = 1,
+) -> Dict[str, Any]:
+    """Queries hotel availability and reserves a temporary hold in the specified location."""
+    hotel_data = MockHotelService.search_hotels(location, checkin, checkout, guests)
+    held_hotel = hotel_data["hotels"][0]
+    task_id = f"task-{held_hotel['hotel_id']}"
+    return {
+        "status": "held",
+        "task_id": task_id,
+        "hotel": held_hotel["name"],
+        "price_per_night_usd": held_hotel["price_per_night_usd"],
+        "rating": held_hotel["rating"],
+        "available_rooms": held_hotel["available_rooms"],
+        "location": location,
+        "checkin": checkin,
+        "checkout": checkout,
+        "guests": guests,
+    }
+
+
+from google.protobuf.json_format import ParseDict
+from a2a.types import AgentCard
+import httpx
+from travel_concierge.gateway.client import DEFAULT_SUBAGENT_TOKENS
+
+
 def create_hotel_subagent(
     endpoint_url: Optional[str] = None,
     webhook_callback_url: Optional[str] = None,
@@ -31,19 +61,37 @@ def create_hotel_subagent(
     validated_webhook = validate_webhook_url(callback_url)
 
     if use_gateway:
-        agent_card_url = f"{settings.endpoints.agent_gateway_url}/agents/hotel-booking-specialist"
+        target_url = f"{settings.endpoints.agent_gateway_url}/agents/hotel-booking-specialist"
     else:
-        base_url = endpoint_url or settings.endpoints.hotel_service_url
-        agent_card_url = f"{base_url.rstrip('/')}{AGENT_CARD_WELL_KNOWN_PATH}"
+        target_url = endpoint_url or settings.endpoints.hotel_service_url
+
+    card = AgentCard()
+    ParseDict({
+        "name": "hotel_booking_specialist",
+        "description": "Remote A2A Agent for finding and reserving accommodations.",
+        "supported_interfaces": [
+            {
+                "url": target_url,
+                "protocol_binding": "JSONRPC",
+                "protocol_version": "1.0",
+            }
+        ],
+    }, card)
+
+    token = DEFAULT_SUBAGENT_TOKENS.get("hotel-booking-specialist", auth_token)
+    httpx_client = httpx.AsyncClient(
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30.0,
+    )
 
     agent = RemoteA2aAgent(
         name="hotel_booking_specialist",
         description="Handles finding and booking hotel accommodations on remote cloud service.",
-        agent_card=agent_card_url,
+        agent_card=card,
+        httpx_client=httpx_client,
         use_legacy=False,
     )
-    # Store push notification config in metadata
-    setattr(agent, "_push_notification_config", {"url": validated_webhook, "token": auth_token})
+    object.__setattr__(agent, "_push_notification_config", {"url": validated_webhook, "token": auth_token})
     return agent
 
 

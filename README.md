@@ -177,7 +177,21 @@ This script enables:
 - `artifactregistry.googleapis.com` (Container Image Repository)
 - `secretmanager.googleapis.com` (API Secret Storage)
 - `iam.googleapis.com` (Identity & Access Management)
+- `iamcredentials.googleapis.com` (IAM Service Account Credentials)
+- `cloudresourcemanager.googleapis.com` (Cloud Resource Manager)
 - `cloudbuild.googleapis.com` (Automated Image Builds)
+- `compute.googleapis.com` (Compute Engine infrastructure)
+- `iap.googleapis.com` (Identity-Aware Proxy / OAuth Brands & Clients)
+- `agentregistry.googleapis.com` (Google Cloud Agent & Skill Registry)
+- `agentidentity.googleapis.com` (Agent Identity Auth Providers)
+- `agentidentitycredentials.googleapis.com` (Agent Identity Credentials)
+- `discoveryengine.googleapis.com` (Discovery Engine & StreamAssist)
+- `dialogflow.googleapis.com` (Dialogflow Chat Runtime)
+- `modelarmor.googleapis.com` (Model Armor Templates & Security)
+- `networkservices.googleapis.com` (Agent Platform Gateways)
+- `networksecurity.googleapis.com` (Network Security AuthzPolicies)
+- `serviceextensions.googleapis.com` (Service Extensions AuthzExtensions)
+- `storage.googleapis.com` (Cloud Storage)
 
 ---
 

@@ -3,9 +3,11 @@ Restaurant Booking Specialist Microservice.
 Provides independent A2A endpoints, Zomato MCP search, dietary skill validation,
 and Zero-Trust audience verification.
 """
+import json
 import logging
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from travel_concierge.tools.mcp_toolset import execute_zomato_search
@@ -87,10 +89,22 @@ def get_agent_card():
     }
 
 
+@app.post("/")
 @app.post("/messages")
 @app.post("/v1/find_dining")
-def find_dining(req: DiningQueryRequest, request: Request, authorization: Optional[str] = Header(None)):
+async def find_dining(req: DiningQueryRequest, request: Request, authorization: Optional[str] = Header(None)):
     verify_restaurant_audience(authorization)
+
+    raw_body = {}
+    try:
+        raw_body = await request.json()
+    except Exception:
+        pass
+
+    is_jsonrpc = isinstance(raw_body, dict) and ("jsonrpc" in raw_body or "method" in raw_body)
+    rpc_id = raw_body.get("id") if is_jsonrpc else None
+    method = raw_body.get("method", "SendMessage") if is_jsonrpc else None
+    params = raw_body.get("params", {}) if is_jsonrpc else {}
 
     claims = req.token_claims or {
         "sub": "user:api_caller@example.com",
@@ -99,7 +113,14 @@ def find_dining(req: DiningQueryRequest, request: Request, authorization: Option
     }
 
     query = req.query or "vegan dinner options"
-    if req.parts and req.parts[0].get("text"):
+    if is_jsonrpc:
+        message = params.get("message", {})
+        parts = message.get("parts", [])
+        if parts and isinstance(parts, list):
+            for p in parts:
+                if isinstance(p, dict) and p.get("text"):
+                    query = p["text"]
+    elif req.parts and req.parts[0].get("text"):
         query = req.parts[0]["text"]
 
     with tracer.start_as_current_span("restaurant_service_find_dining") as span:
@@ -122,6 +143,37 @@ def find_dining(req: DiningQueryRequest, request: Request, authorization: Option
             "total_tokens": 2280,
             "cache_hit_rate": 1650 / 2100,
         }
+
+        if is_jsonrpc:
+            recs_text = "; ".join(mcp_result.get("results", []))
+            msg_text = f"Found dining options: {recs_text}. Dietary compliance: {dietary_eval.get('recommendation', 'Verified plant-based')}."
+            if method == "SendStreamingMessage":
+                async def event_generator():
+                    event_payload = {
+                        "jsonrpc": "2.0",
+                        "id": rpc_id,
+                        "result": {
+                            "message": {
+                                "role": "ROLE_AGENT",
+                                "parts": [{"text": msg_text}],
+                            }
+                        },
+                    }
+                    yield f"data: {json.dumps(event_payload)}\n\n"
+                return StreamingResponse(event_generator(), media_type="text/event-stream")
+            else:
+                return JSONResponse(
+                    content={
+                        "jsonrpc": "2.0",
+                        "id": rpc_id,
+                        "result": {
+                            "message": {
+                                "role": "ROLE_AGENT",
+                                "parts": [{"text": msg_text}],
+                            }
+                        },
+                    }
+                )
 
         return {
             "status": "success",

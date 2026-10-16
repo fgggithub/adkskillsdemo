@@ -1,20 +1,22 @@
 {
   "$schema": "https://cloud.google.com/gemini-enterprise/schemas/agent-registration-v1.json",
   "gemini_enterprise_adk_agent": {
-    "project_id": "qwiklabs-gcp-04-f5ed5822b013",
+    "project_id": "qwiklabs-gcp-04-6d35b13fa41b",
     "app_id": "fdedemoapp",
     "location": "global",
     "documentation": "https://docs.cloud.google.com/gemini/enterprise/docs/register-and-manage-an-adk-agent",
     "agent": {
-      "name": "projects/301388663977/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/17762425149726716071",
+      "name": "projects/1085688005479/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/11044362697015770226",
       "displayName": "Travel Concierge",
       "description": "Travel Concierge Agent for flight, hotel, and restaurant booking",
-      "createTime": "2026-10-15T14:29:00.303515Z",
-      "updateTime": "2026-10-15T14:29:43.015714640Z",
+      "icon": {
+        "uri": "https://storage.googleapis.com/cloud-samples-data/gen-app-builder/search/cymbal-bank-logo.png"
+      },
+      "updateTime": "2026-10-15T22:38:44.407007Z",
       "adkAgentDefinition": {
         "toolSettings": {},
         "provisionedReasoningEngine": {
-          "reasoningEngine": "projects/qwiklabs-gcp-04-f5ed5822b013/locations/us-central1/reasoningEngines/123456"
+          "reasoningEngine": "projects/1085688005479/locations/us-central1/reasoningEngines/5028049356511510528"
         }
       },
       "state": "ENABLED",
@@ -23,6 +25,6 @@
       },
       "agentIdentityInfo": {}
     },
-    "console_url": "https://console.cloud.google.com/gemini-enterprise/locations/global/engines/fdedemoapp/agentic/agents?project=qwiklabs-gcp-04-f5ed5822b013"
+    "console_url": "https://console.cloud.google.com/gemini-enterprise/locations/global/engines/fdedemoapp/agentic/agents?project=qwiklabs-gcp-04-6d35b13fa41b"
   }
 }

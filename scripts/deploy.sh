@@ -35,8 +35,31 @@ echo "      Installing required Python dependencies from requirements.txt..."
 export PATH="${HOME}/.local/bin:${PATH}"
 python3 -m pip install -q -r "${REPO_ROOT}/requirements.txt" 2>/dev/null || python3 -m pip install -q --break-system-packages -r "${REPO_ROOT}/requirements.txt"
 
-# Step 1: Enable APIs
+# Step 1: Enable required GCP APIs (including agentregistry, agentidentity, gateway, vertex ai)
 echo "[2/7] Enabling APIs..."
+REQUIRED_SERVICES=(
+  "run.googleapis.com"
+  "aiplatform.googleapis.com"
+  "cloudtrace.googleapis.com"
+  "artifactregistry.googleapis.com"
+  "secretmanager.googleapis.com"
+  "iam.googleapis.com"
+  "iamcredentials.googleapis.com"
+  "cloudresourcemanager.googleapis.com"
+  "cloudbuild.googleapis.com"
+  "compute.googleapis.com"
+  "iap.googleapis.com"
+  "agentregistry.googleapis.com"
+  "agentidentity.googleapis.com"
+  "agentidentitycredentials.googleapis.com"
+  "discoveryengine.googleapis.com"
+  "dialogflow.googleapis.com"
+  "modelarmor.googleapis.com"
+  "networkservices.googleapis.com"
+  "networksecurity.googleapis.com"
+  "serviceextensions.googleapis.com"
+  "storage.googleapis.com"
+)
 bash scripts/enable_apis.sh
 
 # Step 2: Register Skills in GCP Agent Runtime Skills Registry

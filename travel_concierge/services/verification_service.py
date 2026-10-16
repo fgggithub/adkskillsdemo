@@ -3,9 +3,11 @@ Final Verification Sub-Agent Microservice.
 Provides independent A2A endpoints, HITL task streaming/state management,
 and Zero-Trust audience verification.
 """
+import json
 import logging
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from travel_concierge.tools.mock_services import MockVerificationService, MockAgentResponse
@@ -86,10 +88,21 @@ def get_agent_card():
     }
 
 
+@app.post("/")
 @app.post("/messages")
 @app.post("/v1/tasks/verify")
-def verify_task(req: VerificationTaskRequest, request: Request, authorization: Optional[str] = Header(None)):
+async def verify_task(req: VerificationTaskRequest, request: Request, authorization: Optional[str] = Header(None)):
     verify_verification_audience(authorization)
+
+    raw_body = {}
+    try:
+        raw_body = await request.json()
+    except Exception:
+        pass
+
+    is_jsonrpc = isinstance(raw_body, dict) and ("jsonrpc" in raw_body or "method" in raw_body)
+    rpc_id = raw_body.get("id") if is_jsonrpc else None
+    method = raw_body.get("method", "SendMessage") if is_jsonrpc else None
 
     current_task_id = req.referenceTaskIds[0] if req.referenceTaskIds else "task-hotel-shinjuku-99"
 
@@ -99,6 +112,34 @@ def verify_task(req: VerificationTaskRequest, request: Request, authorization: O
         # Simulate HITL interrupt check
         interrupt_msg = "Please confirm authorization to charge $420.00 to card ending in 4242 for Shinjuku stay."
         if not req.auto_confirm and not req.user_confirmation:
+            if is_jsonrpc:
+                if method == "SendStreamingMessage":
+                    async def event_generator():
+                        event_payload = {
+                            "jsonrpc": "2.0",
+                            "id": rpc_id,
+                            "result": {
+                                "message": {
+                                    "role": "ROLE_AGENT",
+                                    "parts": [{"text": interrupt_msg}],
+                                }
+                            },
+                        }
+                        yield f"data: {json.dumps(event_payload)}\n\n"
+                    return StreamingResponse(event_generator(), media_type="text/event-stream")
+                else:
+                    return JSONResponse(
+                        content={
+                            "jsonrpc": "2.0",
+                            "id": rpc_id,
+                            "result": {
+                                "message": {
+                                    "role": "ROLE_AGENT",
+                                    "parts": [{"text": interrupt_msg}],
+                                }
+                            },
+                        }
+                    )
             return {
                 "status": "pending",
                 "task_id": current_task_id,
@@ -121,6 +162,36 @@ def verify_task(req: VerificationTaskRequest, request: Request, authorization: O
             "total_tokens": 1280,
             "cache_hit_rate": 900 / 1200,
         }
+
+        if is_jsonrpc:
+            msg_text = f"Payment verification complete: {conf_response.text}. Confirmation Code: CONF-TOK-88991."
+            if method == "SendStreamingMessage":
+                async def event_generator():
+                    event_payload = {
+                        "jsonrpc": "2.0",
+                        "id": rpc_id,
+                        "result": {
+                            "message": {
+                                "role": "ROLE_AGENT",
+                                "parts": [{"text": msg_text}],
+                            }
+                        },
+                    }
+                    yield f"data: {json.dumps(event_payload)}\n\n"
+                return StreamingResponse(event_generator(), media_type="text/event-stream")
+            else:
+                return JSONResponse(
+                    content={
+                        "jsonrpc": "2.0",
+                        "id": rpc_id,
+                        "result": {
+                            "message": {
+                                "role": "ROLE_AGENT",
+                                "parts": [{"text": msg_text}],
+                            }
+                        },
+                    }
+                )
 
         return {
             "status": "success",

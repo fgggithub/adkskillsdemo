@@ -26,15 +26,17 @@ class CircuitBreakerConfig:
 class ServiceEndpoints:
     """External and internal service URLs."""
     zomato_mcp_url: str = os.getenv("ZOMATO_MCP_URL", "https://mcp-server.zomato.com/mcp")
-    hotel_service_url: str = os.getenv("HOTEL_SERVICE_URL", "https://hotel-booking-service.partner-cloud.com")
+    hotel_service_url: str = os.getenv(
+        "HOTEL_SERVICE_URL", "https://hotel-booking-specialist-1085688005479.us-central1.run.app"
+    )
     verification_service_url: str = os.getenv(
-        "VERIFICATION_SERVICE_URL", "https://verification-service.partner-cloud.com"
+        "VERIFICATION_SERVICE_URL", "https://final-verification-agent-1085688005479.us-central1.run.app"
     )
     agent_gateway_url: str = os.getenv(
-        "AGENT_GATEWAY_URL", "https://agent-gateway.internal.bank.example/v1"
+        "AGENT_GATEWAY_URL", "https://agent-gateway-pep-1085688005479.us-central1.run.app/v1"
     )
     restaurant_service_url: str = os.getenv(
-        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-service.partner-cloud.com"
+        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-specialist-1085688005479.us-central1.run.app"
     )
     webhook_callback_url: str = os.getenv(
         "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"
@@ -44,12 +46,12 @@ class ServiceEndpoints:
 @dataclass
 class GenerationGuardrailsConfig:
     """LLM generation constraints and guardrails."""
-    max_output_tokens: int = int(os.getenv("MAX_OUTPUT_TOKENS", "1000"))
+    max_output_tokens: int = int(os.getenv("MAX_OUTPUT_TOKENS", "4096"))
     stop_sequences: List[str] = field(
         default_factory=lambda: ["END_OF_CONCIERGE_RESPONSE", "### END"]
     )
     response_mime_type: Optional[str] = os.getenv("RESPONSE_MIME_TYPE")
-    thinking_budget: int = int(os.getenv("THINKING_BUDGET", "2048"))
+    thinking_budget: int = int(os.getenv("THINKING_BUDGET", "1024"))
     thinking_level: str = os.getenv("THINKING_LEVEL", "LOW")  # "LOW" or "HIGH"
 
 
