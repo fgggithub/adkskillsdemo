@@ -5,13 +5,14 @@ import logging
 from typing import Dict, Any, Optional, List, Iterator
 
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent, AGENT_CARD_WELL_KNOWN_PATH
+from travel_concierge.agents.base import ResilientRemoteA2aAgent
 
 from travel_concierge.config import settings
 from travel_concierge.security.ssrf_validator import validate_webhook_url
 from travel_concierge.security.auth_guardrails import build_gateway_headers
 from travel_concierge.telemetry.tracer import get_tracer
 from travel_concierge.telemetry.cost_tracker import track_llm_telemetry
-from travel_concierge.tools.mock_services import MockVerificationService, MockAgentResponse
+from travel_concierge.tools.mock_services import MockVerificationService, MockAgentResponse, MockUsageMetadata
 
 logger = logging.getLogger("travel_concierge.verification_agent")
 tracer = get_tracer("travel_concierge.verification_agent")
@@ -22,25 +23,27 @@ def create_verification_subagent(
     webhook_callback_url: Optional[str] = None,
     auth_token: str = "verification-auth-jwt",
     use_gateway: bool = False,
-) -> RemoteA2aAgent:
+) -> ResilientRemoteA2aAgent:
     """Factory creating the Final Verification Remote A2A Agent."""
     callback_url = webhook_callback_url or settings.endpoints.webhook_callback_url
     validated_webhook = validate_webhook_url(callback_url)
 
     if use_gateway and not endpoint_url:
         agent_card_url = f"{settings.endpoints.agent_gateway_url.rstrip('/')}/agents/final_verification_agent{AGENT_CARD_WELL_KNOWN_PATH}"
+        base_url = f"{settings.endpoints.agent_gateway_url.rstrip('/')}/agents/final_verification_agent"
     else:
         base_url = endpoint_url or settings.endpoints.verification_service_url
         agent_card_url = f"{base_url.rstrip('/')}{AGENT_CARD_WELL_KNOWN_PATH}"
 
 
-    agent = RemoteA2aAgent(
+    agent = ResilientRemoteA2aAgent(
         name="final_verification_agent",
         description="Performs asynchronous verification with the user to confirm itinerary selections and payments.",
         agent_card=agent_card_url,
         use_legacy=False,
     )
     setattr(agent, "_push_notification_config", {"url": validated_webhook, "token": auth_token})
+    setattr(agent, "_target_url", base_url)
     return agent
 
 

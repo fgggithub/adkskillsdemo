@@ -1,33 +1,33 @@
 {
   "$schema": "https://cloud.google.com/gemini-enterprise/schemas/auth-platform-v1.json",
   "google_auth_platform": {
-    "project_id": "qwiklabs-gcp-01-21fab9f22a4a",
+    "project_id": "qwiklabs-gcp-01-917790070139",
     "region": "us-central1",
     "documentation": [
       "https://docs.cloud.google.com/docs/authentication",
       "https://support.google.com/cloud/answer/15549257"
     ],
     "brand": {
-      "name": "projects/825245236792/brands/825245236792",
+      "name": "projects/318615323995/brands/318615323995",
       "application_title": "Travel Concierge Gemini Enterprise Agent",
-      "support_email": "student-01-6472a008497c@qwiklabs.net",
+      "support_email": "student-01-eca55512ea7b@qwiklabs.net",
       "org_internal_only": true
     },
     "oauth_client": {
-      "client_id": "825245236792-so5v3h04i63d8f3ou6n0u40t8m12048u.apps.googleusercontent.com",
+      "client_id": "318615323995-ua3676atdvnjhv6b12k16genvqrrhlun.apps.googleusercontent.com",
       "display_name": "gemini-enterprise-agent-client",
       "application_type": "WEB_APPLICATION",
       "authorized_redirect_uris": [
         "https://vertexaisearch.cloud.google.com/oauth-redirect",
         "https://vertexaisearch.cloud.google.com/static/oauth/oauth.html",
-        "https://agentidentitycredentials.googleapis.com/v1/projects/qwiklabs-gcp-01-21fab9f22a4a/locations/us-central1/authProviders/travel-concierge-auth/oauthcallback",
-        "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/oauth2callback",
-        "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/portal"
+        "https://agentidentitycredentials.googleapis.com/v1/projects/qwiklabs-gcp-01-917790070139/locations/us-central1/authProviders/travel-concierge-auth/oauthcallback",
+        "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/oauth2callback",
+        "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/portal"
       ],
       "authorized_javascript_origins": [
         "https://vertexaisearch.cloud.google.com",
         "https://console.cloud.google.com",
-        "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app"
+        "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app"
       ],
       "secret_manager_reference": "travel-concierge-api-credentials"
     },
@@ -45,15 +45,15 @@
     "auth_manager": {
       "enabled": true,
       "flow_type": "THREE_LEGGED_OAUTH_WITH_PKCE",
-      "auth_provider_resource": "projects/qwiklabs-gcp-01-21fab9f22a4a/locations/us-central1/authProviders/travel-concierge-auth",
+      "auth_provider_resource": "projects/qwiklabs-gcp-01-917790070139/locations/us-central1/authProviders/travel-concierge-auth",
       "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
       "token_url": "https://oauth2.googleapis.com/token",
       "default_continue_uri": "https://vertexaisearch.cloud.google.com/oauth-redirect",
       "pkce_enabled": true
     },
     "service_endpoints": {
-      "service_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app",
-      "stream_assist_portal_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/portal"
+      "service_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app",
+      "stream_assist_portal_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/portal"
     }
   }
 }

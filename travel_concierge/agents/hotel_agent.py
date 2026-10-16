@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, Optional, List
 
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent, AGENT_CARD_WELL_KNOWN_PATH
+from travel_concierge.agents.base import ResilientRemoteA2aAgent
 
 from travel_concierge.config import settings
 from travel_concierge.security.ssrf_validator import validate_webhook_url
@@ -84,7 +85,7 @@ def create_hotel_subagent(
         timeout=30.0,
     )
 
-    agent = RemoteA2aAgent(
+    agent = ResilientRemoteA2aAgent(
         name="hotel_booking_specialist",
         description="Handles finding and booking hotel accommodations on remote cloud service.",
         agent_card=card,
@@ -92,6 +93,7 @@ def create_hotel_subagent(
         use_legacy=False,
     )
     object.__setattr__(agent, "_push_notification_config", {"url": validated_webhook, "token": auth_token})
+    object.__setattr__(agent, "_target_url", target_url)
     return agent
 
 

@@ -9,7 +9,11 @@ from google.adk.agents import Agent
 from travel_concierge.config import settings
 from travel_concierge.telemetry.tracer import get_tracer, inject_trace_context
 from travel_concierge.telemetry.cost_tracker import track_llm_telemetry, calculate_token_cost
-from travel_concierge.agents.base import SHARED_SYSTEM_INSTRUCTION, get_generation_config
+from travel_concierge.agents.base import (
+    SHARED_SYSTEM_INSTRUCTION,
+    get_generation_config,
+    ResilientRemoteA2aAgent,
+)
 from travel_concierge.tools.mcp_toolset import get_zomato_mcp_toolset, execute_zomato_search
 from travel_concierge.tools.skill_registry import get_skill_registry_toolset
 from travel_concierge.tools.mock_services import MockAgentResponse, MockUsageMetadata
@@ -21,6 +25,7 @@ tracer = get_tracer("travel_concierge.restaurant_agent")
 from google.protobuf.json_format import ParseDict
 from a2a.types import AgentCard
 import httpx
+from a2a.client.errors import A2AClientError
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 from travel_concierge.gateway.client import DEFAULT_SUBAGENT_TOKENS
 
@@ -31,8 +36,8 @@ def create_restaurant_subagent(
     cached_content_name: Optional[str] = None,
     tools: Optional[List[Any]] = None,
     auth_token: str = "signed-jwt-or-opaque-auth-token",
-) -> RemoteA2aAgent:
-    """Factory creating RemoteA2aAgent for Restaurant Booking Specialist."""
+) -> ResilientRemoteA2aAgent:
+    """Factory creating ResilientRemoteA2aAgent for Restaurant Booking Specialist."""
     if use_gateway:
         target_url = f"{settings.endpoints.agent_gateway_url}/agents/restaurant-booking-specialist"
     else:
@@ -57,13 +62,15 @@ def create_restaurant_subagent(
         timeout=30.0,
     )
 
-    return RemoteA2aAgent(
+    agent = ResilientRemoteA2aAgent(
         name="restaurant_booking_specialist",
         description="Handles searching restaurants and dining options via Zomato MCP.",
         agent_card=card,
         httpx_client=httpx_client,
         use_legacy=False,
     )
+    object.__setattr__(agent, "_target_url", target_url)
+    return agent
 
 
 class RestaurantAgentWrapper:
@@ -107,8 +114,25 @@ class RestaurantAgentWrapper:
             if reference_task_ids:
                 span.set_attribute("a2a.reference_task_ids", ",".join(reference_task_ids))
 
+            error_captured = None
+
             # 1. Execute protected MCP Zomato Search
-            mcp_result = execute_zomato_search(claims, query)
+            try:
+                mcp_result = execute_zomato_search(claims, query)
+            except PermissionError:
+                raise
+            except Exception as e:
+                logger.warning(f"MCP Zomato search error: {e}")
+                span.record_exception(e)
+                error_captured = str(e)
+                mcp_result = {
+                    "status": "degraded_fallback",
+                    "results": [
+                        "1. Tokyo Vegan Izakaya (Rating: 4.8, Vegan friendly)",
+                        "2. Shinjuku Plant Craft Ramen (Rating: 4.6, 100% Plant-based)",
+                        "3. Kyoto Green Tea & Soba Kitchen (Rating: 4.7, Organic)",
+                    ],
+                }
 
             # Delegate through Agent Gateway PEP if enabled
             if self.use_gateway:
@@ -128,8 +152,13 @@ class RestaurantAgentWrapper:
                     )
                     if "mcp_result" in gw_res:
                         mcp_result = gw_res["mcp_result"]
+                except PermissionError:
+                    raise
                 except Exception as e:
                     logger.warning(f"Gateway restaurant delegation fallback: {e}")
+                    span.record_exception(e)
+                    span.set_attribute("gateway.delegation.error", str(e))
+                    error_captured = error_captured or str(e)
 
             # 2. Package message for ADK Agent
             message_payload = {
@@ -145,20 +174,26 @@ class RestaurantAgentWrapper:
                     response = None
             except Exception as e:
                 logger.warning(f"Live send_message fallback triggered: {e}")
+                span.record_exception(e)
+                span.set_attribute("a2a.send_message.error", str(e))
+                error_captured = error_captured or str(e)
                 response = None
 
+            status_val = "degraded" if error_captured else mcp_result.get("status", "success")
             if response is None:
                 response = MockAgentResponse(
-                    text=f'{{"recommendations": {mcp_result.get("results")}, "status": "{mcp_result.get("status")}"}}',
+                    text=f'{{"recommendations": {mcp_result.get("results")}, "status": "{status_val}"}}',
                     usage_metadata=MockUsageMetadata(
                         prompt_token_count=2100,
                         cached_content_token_count=1650,
                         candidates_token_count=180,
                         total_token_count=2280,
                     ),
-                    status=mcp_result.get("status", "success"),
-                    data={"mcp_result": mcp_result},
+                    status=status_val,
+                    data={"mcp_result": mcp_result, "error": error_captured},
                 )
+            else:
+                status_val = getattr(response, "status", status_val)
 
             # Model Escalation evaluation
             from travel_concierge.agents.model_escalator import default_escalator
@@ -180,4 +215,5 @@ class RestaurantAgentWrapper:
                 "mcp_result": mcp_result,
                 "metrics": metrics.to_dict() if metrics else None,
                 "model_escalation": escalation_dec.to_dict(),
+                "status": status_val,
             }

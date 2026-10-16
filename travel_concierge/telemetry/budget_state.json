@@ -1,8 +1,8 @@
 {
   "budget_limit_usd": 5.0,
-  "cumulative_cost_usd": 0.8575074999999964,
-  "total_prompt_tokens": 2733900,
-  "total_cached_tokens": 2089500,
-  "total_completion_tokens": 202990,
-  "total_invocations": 605
+  "cumulative_cost_usd": 1.0568549999999954,
+  "total_prompt_tokens": 3391500,
+  "total_cached_tokens": 2582200,
+  "total_completion_tokens": 248160,
+  "total_invocations": 751
 }

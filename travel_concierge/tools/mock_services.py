@@ -1,7 +1,7 @@
 """
 Mock services and test fixtures for A2A Subagents, MCP tools, and HITL Tasks.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional, Iterator
 
 
@@ -29,7 +29,7 @@ class MockUsageMetadata:
 @dataclass
 class MockAgentResponse:
     text: str
-    usage_metadata: MockUsageMetadata
+    usage_metadata: MockUsageMetadata = field(default_factory=MockUsageMetadata)
     status: str = "success"
     data: Optional[Dict[str, Any]] = None
 

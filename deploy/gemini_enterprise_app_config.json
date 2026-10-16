@@ -3,34 +3,34 @@
   "engine_id": "fdedemoapp",
   "display_name": "fdedemoapp",
   "solution_type": "SOLUTION_TYPE_CHAT",
-  "project_id": "qwiklabs-gcp-01-21fab9f22a4a",
-  "project_number": "825245236792",
+  "project_id": "qwiklabs-gcp-01-917790070139",
+  "project_number": "318615323995",
   "location": "global",
   "region": "us-central1",
   "collection": "default_collection",
-  "engine_path": "projects/qwiklabs-gcp-01-21fab9f22a4a/locations/global/collections/default_collection/engines/fdedemoapp",
-  "assistant_path": "projects/qwiklabs-gcp-01-21fab9f22a4a/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant",
-  "stream_assist_session_template": "projects/qwiklabs-gcp-01-21fab9f22a4a/locations/global/collections/default_collection/engines/fdedemoapp/sessions/{session_id}",
+  "engine_path": "projects/qwiklabs-gcp-01-917790070139/locations/global/collections/default_collection/engines/fdedemoapp",
+  "assistant_path": "projects/qwiklabs-gcp-01-917790070139/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant",
+  "stream_assist_session_template": "projects/qwiklabs-gcp-01-917790070139/locations/global/collections/default_collection/engines/fdedemoapp/sessions/{session_id}",
   "registered_agents": [
     {
       "agent_id": "travel-concierge-orchestrator",
       "service_name": "travel-concierge-orchestrator",
-      "service_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app",
-      "portal_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/portal",
-      "stream_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/portal/api/stream",
-      "agent_card_url": "https://travel-concierge-orchestrator-b32hrsvfpa-uc.a.run.app/.well-known/agent-card.json",
+      "service_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app",
+      "portal_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/portal",
+      "stream_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/portal/api/stream",
+      "agent_card_url": "https://travel-concierge-orchestrator-qb4o6ju2vq-uc.a.run.app/.well-known/agent-card.json",
       "auth_provider_id": "travel-concierge-auth",
-      "auth_provider_resource": "projects/qwiklabs-gcp-01-21fab9f22a4a/locations/us-central1/authProviders/travel-concierge-auth",
+      "auth_provider_resource": "projects/qwiklabs-gcp-01-917790070139/locations/us-central1/authProviders/travel-concierge-auth",
       "binding_id": "fdedemoapp-travel-concierge-binding",
       "binding_urn": "urn:agent:travel-concierge:default:travel-concierge-orchestrator"
     }
   ],
   "engine_metadata": {
     "@type": "type.googleapis.com/google.cloud.discoveryengine.v1alpha.Engine",
-    "name": "projects/825245236792/locations/global/collections/default_collection/engines/fdedemoapp",
+    "name": "projects/318615323995/locations/global/collections/default_collection/engines/fdedemoapp",
     "displayName": "fdedemoapp",
     "dataStoreIds": [
-      "gemini-enterprise-data-store-ca8e40d9",
+      "gemini-enterprise-data-store-625ae382",
       "init-ds"
     ],
     "solutionType": "SOLUTION_TYPE_SEARCH",
@@ -45,8 +45,8 @@
     },
     "industryVertical": "GENERIC",
     "dataStores": [
-      "projects/825245236792/locations/global/collections/default_collection/dataStores/gemini-enterprise-data-store-ca8e40d9",
-      "projects/825245236792/locations/global/collections/default_collection/dataStores/init-ds"
+      "projects/318615323995/locations/global/collections/default_collection/dataStores/gemini-enterprise-data-store-625ae382",
+      "projects/318615323995/locations/global/collections/default_collection/dataStores/init-ds"
     ],
     "knowledgeGraphConfig": {
       "enablePrivateKnowledgeGraph": true,
@@ -60,9 +60,9 @@
       "sessionManagementPolicy": "VERTEX_AI_MANAGED"
     },
     "features": {
-      "enable-end-user-sharing-with-groups": "FEATURE_STATE_OFF",
       "workflow-agents": "FEATURE_STATE_ON",
       "agent-sharing-without-admin-approval": "FEATURE_STATE_ON",
+      "enable-end-user-sharing-with-groups": "FEATURE_STATE_OFF",
       "disable-agent-sharing": "FEATURE_STATE_OFF"
     },
     "observabilityConfig": {
@@ -70,6 +70,6 @@
     },
     "marketplaceAgentVisibility": "SHOW_ALL_AGENTS"
   },
-  "created_at": "2026-10-16T15:18:23Z",
+  "created_at": "2026-10-16T17:23:34Z",
   "status": "ACTIVE"
 }

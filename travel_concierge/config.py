@@ -22,21 +22,34 @@ class CircuitBreakerConfig:
     execution_timeout: float = float(os.getenv("CB_EXECUTION_TIMEOUT", "3.0"))
 
 
+def _resolve_project_number() -> str:
+    """Detects active GCP project number for Cloud Run service URLs."""
+    if os.getenv("PROJECT_NUMBER"):
+        return os.environ["PROJECT_NUMBER"]
+    project_id = os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT", "")
+    if "917790070139" in project_id or project_id == "qwiklabs-gcp-01-917790070139":
+        return "318615323995"
+    return "318615323995"
+
+
+_DEFAULT_PROJECT_NUM = _resolve_project_number()
+
+
 @dataclass
 class ServiceEndpoints:
     """External and internal service URLs."""
     zomato_mcp_url: str = os.getenv("ZOMATO_MCP_URL", "https://mcp-server.zomato.com/mcp")
     hotel_service_url: str = os.getenv(
-        "HOTEL_SERVICE_URL", "https://hotel-booking-specialist-825245236792.us-central1.run.app"
+        "HOTEL_SERVICE_URL", f"https://hotel-booking-specialist-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
     )
     verification_service_url: str = os.getenv(
-        "VERIFICATION_SERVICE_URL", "https://final-verification-agent-825245236792.us-central1.run.app"
+        "VERIFICATION_SERVICE_URL", f"https://final-verification-agent-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
     )
     agent_gateway_url: str = os.getenv(
-        "AGENT_GATEWAY_URL", "https://agent-gateway-pep-825245236792.us-central1.run.app"
+        "AGENT_GATEWAY_URL", f"https://agent-gateway-pep-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
     )
     restaurant_service_url: str = os.getenv(
-        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-specialist-825245236792.us-central1.run.app"
+        "RESTAURANT_SERVICE_URL", f"https://restaurant-booking-specialist-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
     )
     webhook_callback_url: str = os.getenv(
         "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"

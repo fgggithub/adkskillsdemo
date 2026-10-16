@@ -298,7 +298,14 @@ def deploy_or_update_reasoning_engine(
             staging_bucket=bucket,
         )
 
-        engine = TravelConciergeReasoningEngine()
+        engine = TravelConciergeReasoningEngine(
+            project_id=project_id,
+            location=region,
+            agent_gateway_url=settings.endpoints.agent_gateway_url,
+            hotel_service_url=settings.endpoints.hotel_service_url,
+            restaurant_service_url=settings.endpoints.restaurant_service_url,
+            verification_service_url=settings.endpoints.verification_service_url,
+        )
         requirements = [
             "google-adk>=2.6.0",
             "google-genai>=2.17.0",
@@ -315,7 +322,7 @@ def deploy_or_update_reasoning_engine(
             "opentelemetry-exporter-gcp-trace>=1.7.0",
             "requests>=2.31.0",
             "httpx>=0.27.0",
-            "cloudpickle",
+            "cloudpickle>=3.0.0",
         ]
         extra_packages = ["travel_concierge"]
 
@@ -363,25 +370,26 @@ def ensure_reasoning_engine_package_spec(
         endpoint = f"{region}-aiplatform.googleapis.com"
         client = aiplatform_v1.ReasoningEngineServiceClient(client_options={"api_endpoint": endpoint})
         re = client.get_reasoning_engine(name=reasoning_engine_name)
-        pkg = getattr(re.spec, "package_spec", None)
-        pickle_uri = getattr(pkg, "pickle_object_gcs_uri", None) if pkg else None
-        if pkg and pickle_uri:
-            logger.info(f"✓ Reasoning Engine {reasoning_engine_name} has valid package_spec ({pickle_uri})")
-            return True
-
-        logger.warning(f"Reasoning Engine {reasoning_engine_name} does not have a complete package_spec.")
-        if auto_repair:
-            logger.info(f"Auto-repairing Reasoning Engine {reasoning_engine_name} by deploying package_spec...")
-            deploy_or_update_reasoning_engine(
-                reasoning_engine_name=reasoning_engine_name,
-                project_id=project_id,
-                region=region,
-            )
-            return True
-        return False
     except Exception as e:
-        logger.debug(f"Note on inspecting Reasoning Engine package_spec: {e}")
+        logger.warning(f"Note on inspecting Reasoning Engine package_spec for {reasoning_engine_name}: {e}")
         return True
+
+    pkg = getattr(re.spec, "package_spec", None)
+    pickle_uri = getattr(pkg, "pickle_object_gcs_uri", None) if pkg else None
+    if pkg and pickle_uri:
+        logger.info(f"✓ Reasoning Engine {reasoning_engine_name} has valid package_spec ({pickle_uri})")
+        return True
+
+    logger.warning(f"Reasoning Engine {reasoning_engine_name} does not have a complete package_spec.")
+    if auto_repair:
+        logger.info(f"Auto-repairing Reasoning Engine {reasoning_engine_name} by deploying package_spec...")
+        deploy_or_update_reasoning_engine(
+            reasoning_engine_name=reasoning_engine_name,
+            project_id=project_id,
+            region=region,
+        )
+        return True
+    return False
 
 
 def register_or_update_adk_agent(

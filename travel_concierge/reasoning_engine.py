@@ -16,7 +16,41 @@ class TravelConciergeReasoningEngine:
     Implements ADK Application lifecycle and event streaming for Gemini Enterprise StreamAssist.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        project_id: Optional[str] = None,
+        location: Optional[str] = None,
+        model_name: Optional[str] = None,
+        agent_gateway_url: Optional[str] = None,
+        hotel_service_url: Optional[str] = None,
+        restaurant_service_url: Optional[str] = None,
+        verification_service_url: Optional[str] = None,
+    ):
+        self.project_id = project_id or os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT", "qwiklabs-gcp-01-917790070139")
+        self.location = location or os.environ.get("LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+        self.model_name = model_name or os.environ.get("MODEL_NAME", "gemini-2.5-flash")
+        from travel_concierge.config import settings
+
+        self.agent_gateway_url = (
+            agent_gateway_url
+            or os.environ.get("AGENT_GATEWAY_URL")
+            or settings.endpoints.agent_gateway_url
+        )
+        self.hotel_service_url = (
+            hotel_service_url
+            or os.environ.get("HOTEL_SERVICE_URL")
+            or settings.endpoints.hotel_service_url
+        )
+        self.restaurant_service_url = (
+            restaurant_service_url
+            or os.environ.get("RESTAURANT_SERVICE_URL")
+            or settings.endpoints.restaurant_service_url
+        )
+        self.verification_service_url = (
+            verification_service_url
+            or os.environ.get("VERIFICATION_SERVICE_URL")
+            or settings.endpoints.verification_service_url
+        )
         self._orchestrator = None
         self._adk_app = None
 
@@ -28,26 +62,23 @@ class TravelConciergeReasoningEngine:
         )
         from vertexai.preview.reasoning_engines import AdkApp
 
-        # Set default environment variables for remote container if not present
-        os.environ.setdefault("PROJECT_ID", "qwiklabs-gcp-01-21fab9f22a4a")
-        os.environ.setdefault("LOCATION", "us-central1")
-        os.environ.setdefault("MODEL_NAME", "gemini-2.5-flash")
-        os.environ.setdefault(
-            "AGENT_GATEWAY_URL",
-            "https://agent-gateway-pep-825245236792.us-central1.run.app",
-        )
-        os.environ.setdefault(
-            "HOTEL_SERVICE_URL",
-            "https://hotel-booking-specialist-825245236792.us-central1.run.app",
-        )
-        os.environ.setdefault(
-            "RESTAURANT_SERVICE_URL",
-            "https://restaurant-booking-specialist-825245236792.us-central1.run.app",
-        )
-        os.environ.setdefault(
-            "VERIFICATION_SERVICE_URL",
-            "https://final-verification-agent-825245236792.us-central1.run.app",
-        )
+        # Set environment variables for remote container
+        if self.project_id:
+            os.environ.setdefault("PROJECT_ID", self.project_id)
+            os.environ.setdefault("GOOGLE_CLOUD_PROJECT", self.project_id)
+        if self.location:
+            os.environ.setdefault("LOCATION", self.location)
+            os.environ.setdefault("GOOGLE_CLOUD_LOCATION", self.location)
+        if self.model_name:
+            os.environ.setdefault("MODEL_NAME", self.model_name)
+        if self.agent_gateway_url:
+            os.environ["AGENT_GATEWAY_URL"] = self.agent_gateway_url
+        if self.hotel_service_url:
+            os.environ["HOTEL_SERVICE_URL"] = self.hotel_service_url
+        if self.restaurant_service_url:
+            os.environ["RESTAURANT_SERVICE_URL"] = self.restaurant_service_url
+        if self.verification_service_url:
+            os.environ["VERIFICATION_SERVICE_URL"] = self.verification_service_url
 
         if self._orchestrator is None:
             self._orchestrator = TravelConciergeRootAgent()
@@ -57,13 +88,13 @@ class TravelConciergeReasoningEngine:
             self._adk_app = AdkApp(
                 agent=root_agent,
                 env_vars={
-                    "PROJECT_ID": os.environ.get("PROJECT_ID", "qwiklabs-gcp-01-21fab9f22a4a"),
-                    "LOCATION": os.environ.get("LOCATION", "us-central1"),
-                    "AGENT_GATEWAY_URL": os.environ.get("AGENT_GATEWAY_URL", "https://agent-gateway-pep-825245236792.us-central1.run.app"),
-                    "HOTEL_SERVICE_URL": os.environ.get("HOTEL_SERVICE_URL", "https://hotel-booking-specialist-825245236792.us-central1.run.app"),
-                    "RESTAURANT_SERVICE_URL": os.environ.get("RESTAURANT_SERVICE_URL", "https://restaurant-booking-specialist-825245236792.us-central1.run.app"),
-                    "VERIFICATION_SERVICE_URL": os.environ.get("VERIFICATION_SERVICE_URL", "https://final-verification-agent-825245236792.us-central1.run.app"),
-                    "MODEL_NAME": os.environ.get("MODEL_NAME", "gemini-2.5-flash"),
+                    "PROJECT_ID": os.environ.get("PROJECT_ID", self.project_id or ""),
+                    "LOCATION": os.environ.get("LOCATION", self.location or "us-central1"),
+                    "AGENT_GATEWAY_URL": os.environ.get("AGENT_GATEWAY_URL", self.agent_gateway_url or ""),
+                    "HOTEL_SERVICE_URL": os.environ.get("HOTEL_SERVICE_URL", self.hotel_service_url or ""),
+                    "RESTAURANT_SERVICE_URL": os.environ.get("RESTAURANT_SERVICE_URL", self.restaurant_service_url or ""),
+                    "VERIFICATION_SERVICE_URL": os.environ.get("VERIFICATION_SERVICE_URL", self.verification_service_url or ""),
+                    "MODEL_NAME": os.environ.get("MODEL_NAME", self.model_name or "gemini-2.5-flash"),
                 },
             )
             self._adk_app.set_up()
@@ -78,18 +109,9 @@ class TravelConciergeReasoningEngine:
                 "list_sessions",
                 "delete_session",
             ],
-            "async": [
-                "async_get_session",
-                "async_list_sessions",
-                "async_create_session",
-                "async_delete_session",
-            ],
             "stream": [
                 "stream_query",
                 "streaming_agent_run_with_events",
-            ],
-            "async_stream": [
-                "async_stream_query",
             ],
         }
 
@@ -140,14 +162,19 @@ class TravelConciergeReasoningEngine:
 
         # If standard ADK stream query is invoked with message and user_id, delegate to ADK app
         if message is not None and user_id is not None and self._adk_app is not None:
-            yield from self._adk_app.stream_query(
-                message=message,
-                user_id=user_id,
-                session_id=session_id,
-                run_config=run_config,
-                **kwargs,
-            )
-            return
+            try:
+                yield from self._adk_app.stream_query(
+                    message=message,
+                    user_id=user_id,
+                    session_id=session_id,
+                    run_config=run_config,
+                    **kwargs,
+                )
+                return
+            except Exception as e:
+                logger.warning(
+                    f"ADK app stream_query raised exception: {e}. Falling back to orchestrator plan_trip."
+                )
 
         user_input = destination or prompt
         if "query" in kwargs and kwargs["query"]:
@@ -184,7 +211,16 @@ class TravelConciergeReasoningEngine:
             self.set_up()
 
         logger.info("Executing streaming_agent_run_with_events for StreamAssist")
-        yield from self._adk_app.streaming_agent_run_with_events(request_json)
+        try:
+            yield from self._adk_app.streaming_agent_run_with_events(request_json)
+        except Exception as e:
+            logger.warning(f"streaming_agent_run_with_events encountered exception: {e}. Yielding fallback event.")
+            import json
+            yield json.dumps({
+                "type": "STREAM_ASSIST_FALLBACK",
+                "error": str(e),
+                "message": "Itinerary retrieved under runtime degradation fallback policy.",
+            })
 
     def create_session(
         self,

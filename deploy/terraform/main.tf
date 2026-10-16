@@ -506,6 +506,18 @@ resource "google_cloud_run_v2_service" "travel_concierge" {
         name  = "USE_AGENT_GATEWAY"
         value = "true"
       }
+      env {
+        name  = "HOTEL_SERVICE_URL"
+        value = google_cloud_run_v2_service.hotel_agent.uri
+      }
+      env {
+        name  = "RESTAURANT_SERVICE_URL"
+        value = google_cloud_run_v2_service.restaurant_agent.uri
+      }
+      env {
+        name  = "VERIFICATION_SERVICE_URL"
+        value = google_cloud_run_v2_service.verification_agent.uri
+      }
 
       startup_probe {
         http_get {
