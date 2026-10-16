@@ -65,7 +65,10 @@ def send_gateway_message(
         and not "localhost" in gateway_url
         and (gateway_url.startswith("http://") or gateway_url.startswith("https://"))
     ):
-        target_endpoint = f"{gateway_url.rstrip('/')}{endpoint_path}"
+        base_gateway = gateway_url.rstrip("/")
+        if base_gateway.endswith("/v1"):
+            base_gateway = base_gateway[:-3]
+        target_endpoint = f"{base_gateway}{endpoint_path}"
         with httpx.Client(timeout=15.0) as client:
             resp = client.post(target_endpoint, json=payload, headers=headers)
     else:

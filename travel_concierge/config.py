@@ -27,16 +27,16 @@ class ServiceEndpoints:
     """External and internal service URLs."""
     zomato_mcp_url: str = os.getenv("ZOMATO_MCP_URL", "https://mcp-server.zomato.com/mcp")
     hotel_service_url: str = os.getenv(
-        "HOTEL_SERVICE_URL", "https://hotel-booking-specialist-1085688005479.us-central1.run.app"
+        "HOTEL_SERVICE_URL", "https://hotel-booking-specialist-825245236792.us-central1.run.app"
     )
     verification_service_url: str = os.getenv(
-        "VERIFICATION_SERVICE_URL", "https://final-verification-agent-1085688005479.us-central1.run.app"
+        "VERIFICATION_SERVICE_URL", "https://final-verification-agent-825245236792.us-central1.run.app"
     )
     agent_gateway_url: str = os.getenv(
-        "AGENT_GATEWAY_URL", "https://agent-gateway-pep-1085688005479.us-central1.run.app/v1"
+        "AGENT_GATEWAY_URL", "https://agent-gateway-pep-825245236792.us-central1.run.app"
     )
     restaurant_service_url: str = os.getenv(
-        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-specialist-1085688005479.us-central1.run.app"
+        "RESTAURANT_SERVICE_URL", "https://restaurant-booking-specialist-825245236792.us-central1.run.app"
     )
     webhook_callback_url: str = os.getenv(
         "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"

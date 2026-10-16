@@ -18,6 +18,8 @@ from scripts.register_adk_agent import (
     export_agent_registration_artifacts,
     list_vertex_reasoning_engines,
     resolve_or_provision_reasoning_engine,
+    ensure_reasoning_engine_package_spec,
+    deploy_or_update_reasoning_engine,
 )
 
 
@@ -231,3 +233,47 @@ def test_resolve_or_provision_reasoning_engine_raises_error_no_fallback(mock_lis
             )
         assert "Unable to discover or provision a valid Vertex AI Reasoning Engine" in str(exc_info.value)
         assert "123456" not in str(exc_info.value)
+
+
+@patch("google.cloud.aiplatform_v1.ReasoningEngineServiceClient")
+def test_ensure_reasoning_engine_package_spec_valid(mock_client_cls):
+    mock_client = MagicMock()
+    mock_client_cls.return_value = mock_client
+    mock_re = MagicMock()
+    mock_re.spec.package_spec.pickle_object_gcs_uri = "gs://bucket/re.pkl"
+    mock_re.spec.package_spec.python_version = "3.12"
+    mock_client.get_reasoning_engine.return_value = mock_re
+
+    valid = ensure_reasoning_engine_package_spec(
+        reasoning_engine_name="projects/p/locations/us-central1/reasoningEngines/123",
+        project_id="p",
+        region="us-central1",
+        auto_repair=False,
+    )
+    assert valid is True
+
+
+@patch("scripts.register_adk_agent.deploy_or_update_reasoning_engine")
+@patch("google.cloud.aiplatform_v1.ReasoningEngineServiceClient")
+def test_ensure_reasoning_engine_package_spec_auto_repair(mock_client_cls, mock_deploy):
+    mock_client = MagicMock()
+    mock_client_cls.return_value = mock_client
+    mock_re = MagicMock()
+    # Missing package_spec
+    mock_re.spec.package_spec = None
+    mock_client.get_reasoning_engine.return_value = mock_re
+    mock_deploy.return_value = "projects/p/locations/us-central1/reasoningEngines/123"
+
+    valid = ensure_reasoning_engine_package_spec(
+        reasoning_engine_name="projects/p/locations/us-central1/reasoningEngines/123",
+        project_id="p",
+        region="us-central1",
+        auto_repair=True,
+    )
+    assert valid is True
+    mock_deploy.assert_called_once_with(
+        reasoning_engine_name="projects/p/locations/us-central1/reasoningEngines/123",
+        project_id="p",
+        region="us-central1",
+    )
+

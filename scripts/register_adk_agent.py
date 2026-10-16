@@ -273,15 +273,90 @@ def resolve_or_provision_reasoning_engine(
     )
 
 
+def deploy_or_update_reasoning_engine(
+    reasoning_engine_name: Optional[str],
+    project_id: str,
+    region: str = "us-central1",
+    staging_bucket: Optional[str] = None,
+    display_name: str = "Travel Concierge Root Agent",
+    description: str = "Travel Concierge Orchestrator",
+) -> str:
+    """
+    Deploys or updates a Vertex AI Reasoning Engine with a valid package_spec.
+    Uploads serialized TravelConciergeReasoningEngine, requirements, and extra packages
+    so the Reasoning Engine has active running container instances.
+    """
+    try:
+        import vertexai
+        from vertexai.preview import reasoning_engines
+        from travel_concierge.reasoning_engine import TravelConciergeReasoningEngine
+
+        bucket = staging_bucket or f"gs://{project_id}-bucket"
+        vertexai.init(
+            project=project_id,
+            location=region,
+            staging_bucket=bucket,
+        )
+
+        engine = TravelConciergeReasoningEngine()
+        requirements = [
+            "google-adk>=2.6.0",
+            "google-genai>=2.17.0",
+            "google-cloud-aiplatform>=1.160.0",
+            "google-cloud-discoveryengine>=0.20.0",
+            "a2a-sdk>=1.1.2",
+            "mcp>=1.20.0,<2.0.0",
+            "fastapi>=0.115.0",
+            "uvicorn>=0.30.0",
+            "pydantic>=2.10.0",
+            "opentelemetry-api>=1.28.0",
+            "opentelemetry-sdk>=1.28.0",
+            "opentelemetry-resourcedetector-gcp>=1.14.0",
+            "opentelemetry-exporter-gcp-trace>=1.7.0",
+            "requests>=2.31.0",
+            "httpx>=0.27.0",
+            "cloudpickle",
+        ]
+        extra_packages = ["travel_concierge"]
+
+        if reasoning_engine_name:
+            logger.info(f"Updating Reasoning Engine {reasoning_engine_name} with valid package_spec...")
+            remote_re = reasoning_engines.ReasoningEngine(reasoning_engine_name)
+            res = remote_re.update(
+                reasoning_engine=engine,
+                requirements=requirements,
+                extra_packages=extra_packages,
+                display_name=display_name,
+                description=description,
+            )
+            logger.info(f"✓ Reasoning Engine updated successfully: {res.resource_name}")
+            return res.resource_name
+        else:
+            logger.info(f"Creating new Reasoning Engine '{display_name}' with valid package_spec...")
+            res = reasoning_engines.ReasoningEngine.create(
+                reasoning_engine=engine,
+                requirements=requirements,
+                extra_packages=extra_packages,
+                display_name=display_name,
+                description=description,
+            )
+            logger.info(f"✓ Reasoning Engine created successfully: {res.resource_name}")
+            return res.resource_name
+    except Exception as e:
+        logger.error(f"Failed to deploy/update Reasoning Engine: {e}")
+        raise
+
+
 def ensure_reasoning_engine_package_spec(
     reasoning_engine_name: str,
     project_id: str,
     region: str = "us-central1",
     access_token: Optional[str] = None,
+    auto_repair: bool = True,
 ) -> bool:
     """
     Verifies that a Vertex AI Reasoning Engine has a valid package_spec and running instances.
-    If package_spec is missing or incomplete, logs status.
+    If package_spec is missing or incomplete and auto_repair is True, automatically updates the engine.
     """
     try:
         from google.cloud import aiplatform_v1
@@ -289,10 +364,20 @@ def ensure_reasoning_engine_package_spec(
         client = aiplatform_v1.ReasoningEngineServiceClient(client_options={"api_endpoint": endpoint})
         re = client.get_reasoning_engine(name=reasoning_engine_name)
         pkg = getattr(re.spec, "package_spec", None)
-        if pkg and getattr(pkg, "pickle_object_gcs_uri", None) and getattr(pkg, "python_version", None):
-            logger.info(f"✓ Reasoning Engine {reasoning_engine_name} has valid package_spec (Python {pkg.python_version})")
+        pickle_uri = getattr(pkg, "pickle_object_gcs_uri", None) if pkg else None
+        if pkg and pickle_uri:
+            logger.info(f"✓ Reasoning Engine {reasoning_engine_name} has valid package_spec ({pickle_uri})")
             return True
+
         logger.warning(f"Reasoning Engine {reasoning_engine_name} does not have a complete package_spec.")
+        if auto_repair:
+            logger.info(f"Auto-repairing Reasoning Engine {reasoning_engine_name} by deploying package_spec...")
+            deploy_or_update_reasoning_engine(
+                reasoning_engine_name=reasoning_engine_name,
+                project_id=project_id,
+                region=region,
+            )
+            return True
         return False
     except Exception as e:
         logger.debug(f"Note on inspecting Reasoning Engine package_spec: {e}")
