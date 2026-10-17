@@ -40,7 +40,7 @@ def get_portal_config():
     """Returns portal configuration and budget status."""
     budget = budget_tracker.get_budget_status()
     return {
-        "project_id": settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73",
+        "project_id": settings.PROJECT_ID or "qwiklabs-gcp-01-1115c0de51e5",
         "region": settings.REGION or "us-central1",
         "default_engine_id": os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp"),
         "active_model": settings.DEFAULT_MODEL,
@@ -81,7 +81,7 @@ async def stream_assist_endpoint(req: StreamAssistPortalRequest):
         raise HTTPException(status_code=400, detail="Query text cannot be empty.")
 
     backend = req.backend or "concierge"
-    project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73"
+    project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-1115c0de51e5"
     location = settings.REGION or "us-central1"
     engine_id = req.engine_id or os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp")
 

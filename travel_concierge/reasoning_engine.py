@@ -26,10 +26,11 @@ class TravelConciergeReasoningEngine:
         restaurant_service_url: Optional[str] = None,
         verification_service_url: Optional[str] = None,
     ):
-        self.project_id = project_id or os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT", "qwiklabs-gcp-01-917790070139")
+        from travel_concierge.config import settings
+
+        self.project_id = project_id or os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT") or settings.PROJECT_ID
         self.location = location or os.environ.get("LOCATION") or os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
         self.model_name = model_name or os.environ.get("MODEL_NAME", "gemini-2.5-flash")
-        from travel_concierge.config import settings
 
         self.agent_gateway_url = (
             agent_gateway_url

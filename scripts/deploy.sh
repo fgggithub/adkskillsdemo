@@ -26,9 +26,12 @@ if [[ -z "${PROJECT_ID}" ]]; then
   exit 1
 fi
 
+export PROJECT_ID
+PROJECT_NUMBER="${PROJECT_NUMBER:-$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)' 2>/dev/null || echo '')}"
+export PROJECT_NUMBER
 export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
 
-echo "[1/7] Target GCP Project: ${PROJECT_ID} in ${REGION}"
+echo "[1/7] Target GCP Project: ${PROJECT_ID} (Project Number: ${PROJECT_NUMBER}) in ${REGION}"
 
 # Step 0: Ensure local Python environment and requirements.txt are installed
 echo "      Installing required Python dependencies from requirements.txt..."

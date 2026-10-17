@@ -1,23 +1,23 @@
 $schema: https://cloud.google.com/gemini-enterprise/schemas/agent-registration-v1.json
 gemini_enterprise_adk_agent:
-  project_id: qwiklabs-gcp-01-917790070139
+  project_id: qwiklabs-gcp-01-1115c0de51e5
   app_id: fdedemoapp
   location: global
   documentation: https://docs.cloud.google.com/gemini/enterprise/docs/register-and-manage-an-adk-agent
   agent:
-    name: projects/318615323995/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/4950714182737843172
+    name: projects/172253065956/locations/global/collections/default_collection/engines/fdedemoapp/assistants/default_assistant/agents/9095392043032345976
     displayName: Travel Concierge
     description: Travel Concierge Agent for flight, hotel, and restaurant booking
     icon:
       uri: https://storage.googleapis.com/cloud-samples-data/gen-app-builder/search/cymbal-bank-logo.png
-    createTime: '2026-10-16T17:24:04.810827Z'
-    updateTime: '2026-10-16T17:24:04.810827Z'
+    createTime: '2026-10-16T20:43:17.434478Z'
+    updateTime: '2026-10-16T20:43:17.434478Z'
     adkAgentDefinition:
       toolSettings: {}
       provisionedReasoningEngine:
-        reasoningEngine: projects/318615323995/locations/us-central1/reasoningEngines/8464801647543975936
+        reasoningEngine: projects/172253065956/locations/us-central1/reasoningEngines/687507303540195328
     state: ENABLED
     sharingConfig:
       scope: ALL_USERS
     agentIdentityInfo: {}
-  console_url: https://console.cloud.google.com/gemini-enterprise/locations/global/engines/fdedemoapp/agentic/agents?project=qwiklabs-gcp-01-917790070139
+  console_url: https://console.cloud.google.com/gemini-enterprise/locations/global/engines/fdedemoapp/agentic/agents?project=qwiklabs-gcp-01-1115c0de51e5

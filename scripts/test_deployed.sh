@@ -22,6 +22,9 @@ echo -e "${BOLD}================================================================
 # 1. Resolve Deployed Service URLs
 REGION="${REGION:-us-central1}"
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo '')}"
+export PROJECT_ID
+PROJECT_NUMBER="${PROJECT_NUMBER:-$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)' 2>/dev/null || echo '')}"
+export PROJECT_NUMBER
 
 resolve_url() {
   local service_name="$1"

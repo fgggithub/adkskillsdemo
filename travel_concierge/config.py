@@ -23,13 +23,98 @@ class CircuitBreakerConfig:
 
 
 def _resolve_project_number() -> str:
-    """Detects active GCP project number for Cloud Run service URLs."""
+    """Detects active GCP project number dynamically for Cloud Run service URLs."""
+    # 1. Direct environment variable
     if os.getenv("PROJECT_NUMBER"):
-        return os.environ["PROJECT_NUMBER"]
-    project_id = os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT", "")
-    if "917790070139" in project_id or project_id == "qwiklabs-gcp-01-917790070139":
-        return "318615323995"
-    return "318615323995"
+        return os.environ["PROJECT_NUMBER"].strip()
+
+    # 2. Compute metadata server (when running on Cloud Run, GCE, GKE)
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "http://metadata.google.internal/computeMetadata/v1/project/numeric-project-id",
+            headers={"Metadata-Flavor": "Google"}
+        )
+        with urllib.request.urlopen(req, timeout=0.5) as resp:
+            val = resp.read().decode("utf-8").strip()
+            if val.isdigit() and val != "0":
+                return val
+    except Exception:
+        pass
+
+    # Determine active project ID
+    active_project_id = os.getenv("PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT", "")
+    if not active_project_id:
+        try:
+            import subprocess
+            res_p = subprocess.run(
+                ["gcloud", "config", "get-value", "project"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+                check=False
+            )
+            if res_p.returncode == 0 and res_p.stdout.strip():
+                active_project_id = res_p.stdout.strip()
+        except Exception:
+            pass
+
+    # 3. Check deployment config if it matches active project
+    try:
+        import json
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parent.parent
+        cfg_paths = [
+            repo_root / "deploy" / "gemini_enterprise_app_config.json",
+            Path("/app/deploy/gemini_enterprise_app_config.json"),
+            Path("deploy/gemini_enterprise_app_config.json"),
+        ]
+        for cfg_file in cfg_paths:
+            if cfg_file.is_file():
+                with open(cfg_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    cfg_pid = data.get("project_id", "")
+                    pnum = str(data.get("project_number", "")).strip()
+                    if pnum.isdigit() and (not active_project_id or cfg_pid == active_project_id):
+                        return pnum
+    except Exception:
+        pass
+
+    # 4. Query via gcloud CLI using active project
+    if active_project_id:
+        try:
+            import subprocess
+            res = subprocess.run(
+                ["gcloud", "projects", "describe", active_project_id, "--format=value(projectNumber)"],
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+                check=False
+            )
+            if res.returncode == 0 and res.stdout.strip().isdigit():
+                return res.stdout.strip()
+        except Exception:
+            pass
+
+    # 5. Inspect terraform state if present
+    try:
+        import re
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parent.parent
+        tfstate_paths = [
+            repo_root / "deploy" / "terraform" / "terraform.tfstate",
+            Path("deploy/terraform/terraform.tfstate"),
+        ]
+        for tfstate in tfstate_paths:
+            if tfstate.is_file():
+                content = tfstate.read_text(encoding="utf-8")
+                matches = re.findall(r"(?:projects/|run\.app.*?[-])(\d{10,14})", content)
+                if matches:
+                    return matches[0]
+    except Exception:
+        pass
+
+    return "172253065956"
 
 
 _DEFAULT_PROJECT_NUM = _resolve_project_number()
@@ -38,21 +123,33 @@ _DEFAULT_PROJECT_NUM = _resolve_project_number()
 @dataclass
 class ServiceEndpoints:
     """External and internal service URLs."""
-    zomato_mcp_url: str = os.getenv("ZOMATO_MCP_URL", "https://mcp-server.zomato.com/mcp")
-    hotel_service_url: str = os.getenv(
-        "HOTEL_SERVICE_URL", f"https://hotel-booking-specialist-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
+    zomato_mcp_url: str = field(
+        default_factory=lambda: os.getenv("ZOMATO_MCP_URL", "https://mcp-server.zomato.com/mcp")
     )
-    verification_service_url: str = os.getenv(
-        "VERIFICATION_SERVICE_URL", f"https://final-verification-agent-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
+    hotel_service_url: str = field(
+        default_factory=lambda: os.getenv(
+            "HOTEL_SERVICE_URL", f"https://hotel-booking-specialist-{_resolve_project_number()}.us-central1.run.app"
+        )
     )
-    agent_gateway_url: str = os.getenv(
-        "AGENT_GATEWAY_URL", f"https://agent-gateway-pep-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
+    verification_service_url: str = field(
+        default_factory=lambda: os.getenv(
+            "VERIFICATION_SERVICE_URL", f"https://final-verification-agent-{_resolve_project_number()}.us-central1.run.app"
+        )
     )
-    restaurant_service_url: str = os.getenv(
-        "RESTAURANT_SERVICE_URL", f"https://restaurant-booking-specialist-{_DEFAULT_PROJECT_NUM}.us-central1.run.app"
+    agent_gateway_url: str = field(
+        default_factory=lambda: os.getenv(
+            "AGENT_GATEWAY_URL", f"https://agent-gateway-pep-{_resolve_project_number()}.us-central1.run.app"
+        )
     )
-    webhook_callback_url: str = os.getenv(
-        "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"
+    restaurant_service_url: str = field(
+        default_factory=lambda: os.getenv(
+            "RESTAURANT_SERVICE_URL", f"https://restaurant-booking-specialist-{_resolve_project_number()}.us-central1.run.app"
+        )
+    )
+    webhook_callback_url: str = field(
+        default_factory=lambda: os.getenv(
+            "WEBHOOK_CALLBACK_URL", "https://travel-concierge.example.com/a2a/webhooks/push"
+        )
     )
 
 

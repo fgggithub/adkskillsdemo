@@ -86,6 +86,7 @@ def get_gateway_agent_card():
 
 
 @app.get("/v1/agents/{agent_name}/.well-known/agent-card.json")
+@app.get("/agents/{agent_name}/.well-known/agent-card.json")
 async def get_subagent_card(agent_name: str, request: Request):
     """Proxies agent card discovery for a specific subagent."""
     target_app = SUBAGENT_APPS.get(agent_name)
@@ -98,6 +99,9 @@ async def get_subagent_card(agent_name: str, request: Request):
 
 
 @app.post("/v1/agents/{agent_name}/messages")
+@app.post("/agents/{agent_name}")
+@app.post("/agents/{agent_name}/")
+@app.post("/agents/{agent_name}/messages")
 async def route_agent_message(
     agent_name: str,
     request: Request,

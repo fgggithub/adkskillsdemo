@@ -1,6 +1,7 @@
 """
 Restaurant Booking Specialist Sub-Agent implementation.
 """
+import json
 import logging
 from typing import Dict, Any, Optional, List
 
@@ -87,7 +88,10 @@ class RestaurantAgentWrapper:
     ):
         self.cached_content_name = cached_content_name
         self.use_gateway = use_gateway
-        self.agent = agent or create_restaurant_subagent(cached_content_name=cached_content_name)
+        self.agent = agent or create_restaurant_subagent(
+            cached_content_name=cached_content_name,
+            use_gateway=use_gateway,
+        )
 
     def find_dining_options(
         self,
@@ -134,6 +138,8 @@ class RestaurantAgentWrapper:
                     ],
                 }
 
+            response = None
+
             # Delegate through Agent Gateway PEP if enabled
             if self.use_gateway:
                 try:
@@ -152,6 +158,19 @@ class RestaurantAgentWrapper:
                     )
                     if "mcp_result" in gw_res:
                         mcp_result = gw_res["mcp_result"]
+                    recs = gw_res.get("recommendations") or mcp_result.get("results", [])
+                    gw_status = gw_res.get("status", "success")
+                    response = MockAgentResponse(
+                        text=json.dumps(recs) if isinstance(recs, list) else str(recs),
+                        usage_metadata=MockUsageMetadata(
+                            prompt_token_count=gw_res.get("metrics", {}).get("prompt_tokens", 2100),
+                            cached_content_token_count=gw_res.get("metrics", {}).get("cached_tokens", 1650),
+                            candidates_token_count=gw_res.get("metrics", {}).get("completion_tokens", 180),
+                            total_token_count=gw_res.get("metrics", {}).get("total_tokens", 2280),
+                        ),
+                        status=gw_status,
+                        data=gw_res,
+                    )
                 except PermissionError:
                     raise
                 except Exception as e:
@@ -159,6 +178,7 @@ class RestaurantAgentWrapper:
                     span.record_exception(e)
                     span.set_attribute("gateway.delegation.error", str(e))
                     error_captured = error_captured or str(e)
+                    response = None
 
             # 2. Package message for ADK Agent
             message_payload = {
@@ -167,17 +187,18 @@ class RestaurantAgentWrapper:
                 "parts": [{"text": f"Find dining options for: {query}. Tool results: {mcp_result.get('results')}"}],
             }
 
-            try:
-                if hasattr(self.agent, "send_message"):
-                    response = self.agent.send_message(message=message_payload, headers=req_headers)
-                else:
+            if response is None:
+                try:
+                    if hasattr(self.agent, "send_message"):
+                        response = self.agent.send_message(message=message_payload, headers=req_headers)
+                    else:
+                        response = None
+                except Exception as e:
+                    logger.warning(f"Live send_message fallback triggered: {e}")
+                    span.record_exception(e)
+                    span.set_attribute("a2a.send_message.error", str(e))
+                    error_captured = error_captured or str(e)
                     response = None
-            except Exception as e:
-                logger.warning(f"Live send_message fallback triggered: {e}")
-                span.record_exception(e)
-                span.set_attribute("a2a.send_message.error", str(e))
-                error_captured = error_captured or str(e)
-                response = None
 
             status_val = "degraded" if error_captured else mcp_result.get("status", "success")
             if response is None:

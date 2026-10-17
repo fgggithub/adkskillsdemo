@@ -19,16 +19,25 @@ from travel_concierge.tools.mock_services import MockAgentResponse
 
 
 def test_subagent_service_urls_resolution():
-    """Verify that default Cloud Run service URLs use active project number 318615323995, not 825245236792."""
+    """Verify that default Cloud Run service URLs use the dynamically resolved active project number."""
+    active_project_num = _resolve_project_number()
+    assert active_project_num
     assert "825245236792" not in settings.endpoints.restaurant_service_url
     assert "825245236792" not in settings.endpoints.hotel_service_url
     assert "825245236792" not in settings.endpoints.verification_service_url
     assert "825245236792" not in settings.endpoints.agent_gateway_url
 
-    assert "318615323995" in settings.endpoints.restaurant_service_url
-    assert "318615323995" in settings.endpoints.hotel_service_url
-    assert "318615323995" in settings.endpoints.verification_service_url
-    assert "318615323995" in settings.endpoints.agent_gateway_url
+    # Stale residual project number 318615323995 should not be in URLs if active is different
+    if active_project_num != "318615323995":
+        assert "318615323995" not in settings.endpoints.restaurant_service_url
+        assert "318615323995" not in settings.endpoints.hotel_service_url
+        assert "318615323995" not in settings.endpoints.verification_service_url
+        assert "318615323995" not in settings.endpoints.agent_gateway_url
+
+    assert active_project_num in settings.endpoints.restaurant_service_url
+    assert active_project_num in settings.endpoints.hotel_service_url
+    assert active_project_num in settings.endpoints.verification_service_url
+    assert active_project_num in settings.endpoints.agent_gateway_url
 
 
 def test_create_restaurant_subagent_resilient_type():

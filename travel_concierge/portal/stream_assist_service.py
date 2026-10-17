@@ -42,7 +42,7 @@ class StreamAssistService:
         front-ending the Travel Concierge Multi-Agent Orchestrator.
         """
         start_time = time.time()
-        project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-f54046474f73"
+        project_id = settings.PROJECT_ID or "qwiklabs-gcp-01-1115c0de51e5"
         location = settings.REGION or "us-central1"
         engine_id = os.getenv("GEMINI_ENTERPRISE_ENGINE_ID", "fdedemoapp")
 

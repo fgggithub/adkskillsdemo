@@ -238,6 +238,15 @@ class ResilientRemoteA2aAgent(RemoteA2aAgent):
 
         if target_url:
             try:
+                from travel_concierge.config import _resolve_project_number
+                active_num = _resolve_project_number()
+                for stale in ("318615323995", "825245236792"):
+                    if stale in target_url:
+                        target_url = target_url.replace(stale, active_num)
+            except Exception:
+                pass
+
+            try:
                 req_headers = dict(headers or {})
                 from travel_concierge.gateway.client import DEFAULT_SUBAGENT_TOKENS
                 token = DEFAULT_SUBAGENT_TOKENS.get(self.name, "")
